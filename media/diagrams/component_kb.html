@@ -148,6 +148,7 @@
         <a href="#fc">Flight Ctrl</a>
         <a href="#pi">Companion Pi</a>
         <a href="#rc">RC Link</a>
+        <a href="#cam">Depth Cam</a>
       </nav>
       <span class="spacer"></span>
       <div class="legend">
@@ -462,6 +463,68 @@ MOT_SLEWRATE <span class="p">0</span>   RC5_OPTION <span class="p">153</span>  <
           <p class="lbl">Files</p>
           <div class="files">
             <a href="esp8266_planner.html">wiring planner (RX net)</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DEPTH CAMERA ============ -->
+    <section class="card" id="cam">
+      <div class="chead">
+        <div class="idx">CAM</div>
+        <div class="cname">
+          <h2>Depth Camera — RealSense D455</h2>
+          <div class="role">Stereo depth + RGB + IMU · perception</div>
+        </div>
+        <span class="pill wip">In progress</span>
+      </div>
+      <div class="cbody">
+        <div class="imgslot" data-img="d455.jpg">
+          <div class="ph">D455 photo</div><div class="fn">media/diagrams/d455.jpg</div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Role</p>
+          <p style="margin:0;font-size:13px">Gives the robot 3D perception: <b>obstacle avoidance</b>, <b>visual-inertial odometry</b> (a heading source the F405 lacks + an RTK-dropout backstop), and yard <b>mapping</b>. The RGB stream doubles as FPV + a safety camera (stop the blade if a person enters frame).</p>
+        </div>
+        <div class="sec">
+          <p class="lbl">Specs</p>
+          <table>
+            <tr><td class="k">RGB</td><td class="v">up to <b>1280×800 @ 30</b> (YUYV)</td></tr>
+            <tr><td class="k">Depth</td><td class="v">stereo <b>1280×720 @ 90</b> · 0.4–6 m in / ~20 m out</td></tr>
+            <tr><td class="k">IR</td><td class="v">global-shutter stereo (low light)</td></tr>
+            <tr><td class="k">IMU</td><td class="v"><b>6-axis</b> accel + gyro (BMI055)</td></tr>
+            <tr><td class="k">Bus</td><td class="v">USB <b>3.2</b> · ~2–3.5 W</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <p class="lbl">Connections</p>
+          <ul class="conn">
+            <li><span class="from">USB3</span> → Pi (5 Gbps — needs a blue SS port)</li>
+            <li>nodes — <b>video0</b> depth · <b>video2</b> IR · <b>video4</b> RGB</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Setup (SDK on host, not firmware)</p>
+          <div class="term"><div class="bar">build librealsense from source</div><pre><span class="c"># no apt pkg (Debian trixie) + no py3.13/aarch64 wheel → source build</span>
+<span class="p">$</span> cmake .. -DFORCE_RSUSB_BACKEND=true \
+      -DBUILD_PYTHON_BINDINGS=true
+<span class="p">$</span> make -j3 &amp;&amp; sudo make install &amp;&amp; sudo ldconfig
+<span class="p">$</span> rs-enumerate-devices        <span class="c"># verify streams + IMU</span></pre></div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Replace / gotchas</p>
+          <ul class="gotcha">
+            <li>Needs a <b>USB3</b> (blue/SS) port for depth+RGB — USB2 = RGB only.</li>
+            <li>No apt package on trixie + no pip wheel (py3.13/aarch64) → <b>build from source</b>.</li>
+            <li><b>Pi 4B can't run full SLAM/VIO</b> at high res — downscale or offload heavy mapping.</li>
+            <li>Use <code>FORCE_RSUSB_BACKEND=true</code> on the Pi (userspace libusb, no kernel patch).</li>
+            <li>~2–3.5 W draw — mind the shared Pi supply with F405 + C6.</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Files</p>
+          <div class="files">
+            <a href="esp8266_planner.html">wiring planner (cam net)</a>
           </div>
         </div>
       </div>

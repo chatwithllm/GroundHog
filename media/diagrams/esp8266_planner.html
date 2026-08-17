@@ -96,7 +96,7 @@ var DEF=[
  {id:'rx', t:'FLYSKY iA6B',        p:['i-BUS(S) → SBUS pad','V+ → 5V · G → GND'], st:'ok', x:600,y:480,w:185,h:64},
  {id:'gps',t:'LC29H RTK (HAT)',    p:['on Pi header','+ antenna'], st:'todo', x:1240,y:150,w:190,h:60,hat:true},
  {id:'pi', t:'RASPBERRY Pi',       p:['5V power → C6 + F405','flashes / MAVLink F405','later: NTRIP→RTCM RTK'], st:'ok', x:1240,y:320,w:200,h:92},
- {id:'cam',t:'USB PTZ CAMERA',     p:['OBSBOT Tiny SE','→ Pi USB · v4l2 pan/tilt'], st:'todo', x:1230,y:470,w:200,h:70}
+ {id:'cam',t:'REALSENSE D455',     p:['depth + RGB + IMU','→ Pi USB3'], st:'ok', x:1230,y:470,w:200,h:70}
 ];
 // WORKING NOW (green tiles): ESP8266 + BSS138 shifter + 2 motors + 24V pack. TO COME (amber, hidden): blade, UBEC, F405, LC29H, Pi, camera.
 // a = source, b = destination — the arrow points the way the signal / voltage flows.
@@ -149,9 +149,9 @@ var WIRES=[
  {a:'pi',b:'esp',net:'v5', l:'Pi USB → C6 (5V)',mids:[]},
  {a:'gps',b:'pi',net:'gps',l:'RTK · NTRIP→RTCM',mids:[]},
  {a:'pi',b:'fc', net:'usb',l:'USB · 5V + MAVLink / flash',mids:[]},
- {a:'cam',b:'pi',net:'cam',l:'USB · v4l2 pan/tilt',mids:[]}
+ {a:'cam',b:'pi',net:'cam',l:'USB3 · depth+RGB+IMU',mids:[]}
 ];
-var TODO=['ubec','gps','cam'];  // fc, rx, pi now active. m3 (blade) is controlled by the board selector.
+var TODO=['ubec','gps'];  // fc, rx, pi, cam now active. m3 (blade) is controlled by the board selector.
 var KEY='rover_living_v5';
 var stage=document.getElementById('stage'), svg=document.getElementById('wires');
 var tiles={}, off={}, soloNet=null, ANCH={}, selectedWire=null, hidden=new Set(), curBoard='c6';
