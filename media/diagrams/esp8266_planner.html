@@ -81,7 +81,7 @@ var NETS={
  pwm:{c:'#4363d8',n:'PWM'}, dir:{c:'#f2ae44',n:'DIR'}, fg:{c:'#2f9e44',n:'FG'},
  v5:{c:'#f58231',n:'5V'}, v33:{c:'#911eb4',n:'3V3'},
  gps:{c:'#16a34a',n:'RTK'}, usb:{c:'#0ba5c4',n:'MAVLink'}, cam:{c:'#e879f9',n:'CAM'},
- rc:{c:'#eab308',n:'RC-PWM'}, sbus:{c:'#06b6d4',n:'SBUS'}
+ rc:{c:'#eab308',n:'RC-PWM'}, sbus:{c:'#06b6d4',n:'SBUS'}, avoid:{c:'#14b8a6',n:'AVOID'}
 };
 // st:'ok' = working now (solid green) · st:'todo' = to come (dashed amber, hidden by default)
 var DEF=[
@@ -149,7 +149,10 @@ var WIRES=[
  {a:'pi',b:'esp',net:'v5', l:'Pi USB → C6 (5V)',mids:[]},
  {a:'gps',b:'pi',net:'gps',l:'RTK · NTRIP→RTCM',mids:[]},
  {a:'pi',b:'fc', net:'usb',l:'USB · 5V + MAVLink / flash',mids:[]},
- {a:'cam',b:'pi',net:'cam',l:'USB3 · depth+RGB+IMU',mids:[]}
+ {a:'cam',b:'pi',net:'cam',l:'USB3 · depth+RGB+IMU',mids:[]},
+ // --- obstacle avoidance dataflow (D455 depth -> Pi detect -> F405 MAVLink) ---
+ {a:'cam',b:'pi',net:'avoid',l:'depth → obstacle detect (Pi/pyrealsense2)',mids:[]},
+ {a:'pi',b:'fc', net:'avoid',l:'OBSTACLE_DISTANCE MAVLink → ArduRover avoid (planned)',mids:[]}
 ];
 var TODO=['ubec','gps'];  // fc, rx, pi, cam now active. m3 (blade) is controlled by the board selector.
 var KEY='rover_living_v5';
