@@ -1,0 +1,11 @@
+[Unit]
+Description=MAVLink router (F405 <-> UDP)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/mavlink-routerd -c /etc/mavlink-router/main.conf
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
