@@ -28,3 +28,7 @@ logs/
 # --- OS cruft ---
 .DS_Store
 Thumbs.db
+
+# --- Claude Code runtime ---
+.claude/*.lock
+.claude/settings.local.json
