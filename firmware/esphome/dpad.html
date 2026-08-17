@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>RTK Rover Joystick</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --edge:#30363d; --ink:#e6edf3; --mut:#8b949e;
+    --stick:#1f6feb; --ring:#21324a; --stop:#da3633; --go:#2ea043;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:none;}
+  html,body{margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow:hidden;}
+  body{display:flex; flex-direction:column; padding:14px; gap:14px; max-width:520px; margin:0 auto;}
+  header{display:flex; align-items:center; justify-content:space-between;}
+  h1{font-size:17px; margin:0; font-weight:700;}
+  .status{display:flex; align-items:center; gap:8px;}
+  .log{font-family:ui-monospace,monospace; font-size:11px; color:var(--mut);}
+  .dot{width:12px; height:12px; border-radius:50%; background:var(--mut); transition:background .2s;}
+  .dot.ok{background:var(--go);} .dot.bad{background:var(--stop);}
+  .speed{background:var(--panel); border:1px solid var(--edge); border-radius:12px; padding:12px 14px;}
+  .speed label{display:flex; justify-content:space-between; font-size:14px; color:var(--mut); margin-bottom:8px;}
+  .speed b{color:var(--ink); font-size:16px;}
+  input[type=range]{width:100%; height:34px; accent-color:var(--stick); touch-action:none;}
+  .joywrap{flex:1; display:flex; align-items:center; justify-content:center; min-height:320px;}
+  #joy{position:relative; width:300px; height:300px; max-width:82vw; max-height:82vw;
+    border-radius:50%; background:radial-gradient(circle at 50% 50%, #12213a 0%, var(--panel) 70%);
+    border:2px solid var(--ring); touch-action:none;}
+  #joy::before,#joy::after{content:""; position:absolute; background:var(--ring);}
+  #joy::before{left:50%; top:8%; bottom:8%; width:2px; transform:translateX(-50%);}
+  #joy::after{top:50%; left:8%; right:8%; height:2px; transform:translateY(-50%);}
+  #thumb{position:absolute; width:96px; height:96px; left:50%; top:50%;
+    margin:-48px 0 0 -48px; border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, #4a90ff, var(--stick));
+    box-shadow:0 6px 18px rgba(0,0,0,.5); transition:transform .08s ease-out;}
+  #thumb.live{transition:none;}
+  .stopbtn{border:none; border-radius:14px; background:var(--stop); color:#fff;
+    font-size:20px; font-weight:800; padding:18px; letter-spacing:.5px;}
+  .stopbtn:active{filter:brightness(1.2);}
+  .hint{text-align:center; color:var(--mut); font-size:12px; line-height:1.5;}
+</style>
+</head>
+<body>
+  <header>
+    <h1>RTK Rover</h1>
+    <div class="status"><span class="log" id="log">idle</span><span class="dot" id="dot"></span></div>
+  </header>
+
+  <div class="speed">
+    <label>Max Speed <b><span id="spdVal">40</span>%</b></label>
+    <input type="range" id="spd" min="10" max="100" step="5" value="40">
+  </div>
+
+  <div class="joywrap">
+    <div id="joy"><div id="thumb"></div></div>
+  </div>
+
+  <button class="stopbtn" id="stop">■ STOP</button>
+  <div class="hint">
+    Push the stick to drive · forward/back = throttle, left/right = steer.<br>
+    Let go → springs to center &amp; auto-stops. Deadman stops the bot if the link drops.
+  </div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const dot=$('#dot'), log=$('#log'), joy=$('#joy'), thumb=$('#thumb'), spd=$('#spd'), spdVal=$('#spdVal');
+
+  // --- transport: same-origin -> local proxy -> ESP (no Origin header) ---
+  // Never stack (AsyncWebServer 500s on overlap) but never drop the latest either:
+  // if busy, remember the newest command and fire it the instant we're free.
+  let inflight=false, pending=null;
+  function raw(path, label){
+    inflight = true;
+    fetch('/api'+path, {method:'POST', body:''})
+      .then(r => { dot.className = r.ok ? 'dot ok' : 'dot bad';
+                   if (label) log.textContent = r.ok ? label : ('HTTP '+r.status); })
+      .catch(() => { dot.className='dot bad'; log.textContent='NO LINK'; })
+      .finally(() => { inflight=false; if (pending){ const p=pending; pending=null; raw(p.path,p.label); } });
+  }
+  function send(path, label){ if (inflight) pending={path,label}; else raw(path,label); }
+  // pack thr/steer (-100..100) -> one number; drive the Joy channel
+  function drive(thr, steer){
+    const p = (Math.round(thr)+100)*1000 + (Math.round(steer)+100);
+    send(`/number/Joy/set?value=${p}`, `T${Math.round(thr)} S${Math.round(steer)}`);
+  }
+  const neutral = () => drive(0,0);
+
+  spd.addEventListener('input', () => { spdVal.textContent = spd.value; });
+
+  // --- joystick ---
+  let active=false, curThr=0, curSteer=0;
+  const R = () => joy.clientWidth/2 - 20;          // usable radius
+
+  function place(dx,dy){
+    const r=R(), d=Math.hypot(dx,dy);
+    if (d>r){ dx=dx/d*r; dy=dy/d*r; }
+    thumb.style.transform = `translate(${dx}px,${dy}px)`;
+    const scale = spd.value/100;                    // Max Speed caps deflection
+    curSteer = -(dx/r)*100*scale;                   // inverted: push left = turn left
+    curThr   = -(dy/r)*100*scale;                   // up = forward
+  }
+  function center(){ thumb.style.transform='translate(0,0)'; curThr=0; curSteer=0; }
+
+  function xy(e){ const b=joy.getBoundingClientRect(); return [e.clientX-b.left-b.width/2, e.clientY-b.top-b.height/2]; }
+
+  joy.addEventListener('pointerdown', e => {
+    e.preventDefault(); active=true; thumb.classList.add('live');
+    try{ joy.setPointerCapture(e.pointerId); }catch(_){}
+    place(...xy(e));
+  });
+  joy.addEventListener('pointermove', e => { if(active){ e.preventDefault(); place(...xy(e)); } });
+  const release = e => {
+    if(!active) return; e && e.preventDefault();
+    active=false; thumb.classList.remove('live'); center(); neutral();   // instant stop on release
+  };
+  joy.addEventListener('pointerup', release);
+  joy.addEventListener('pointercancel', release);
+  joy.addEventListener('pointerleave', release);
+  // extra safety: any of these = stop
+  window.addEventListener('blur', release);
+  document.addEventListener('visibilitychange', () => { if(document.hidden) release(); });
+
+  // --- heartbeat: stream current stick @ ~8 Hz; keeps firmware deadman fed while held ---
+  setInterval(() => { if(active) drive(curThr, curSteer); }, 200);
+
+  // STOP button
+  $('#stop').addEventListener('pointerdown', e => { e.preventDefault(); release(); neutral(); });
+
+  neutral();   // establish link + zero on load
+})();
+</script>
+</body>
+</html>

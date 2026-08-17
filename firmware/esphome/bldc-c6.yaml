@@ -1,0 +1,284 @@
+# BLDC5520 ×3 skid-steer + blade — Seeed XIAO ESP32-C6 (WiFi dashboard)
+# All 5V motor signals (FG, CW/CCW) MUST go through a BSS138 level-shifter (needs 6 channels).
+# PWM is 3.3V-direct (proven). Pins avoid C6 strapping (GPIO4/5/8/9/15).
+#   LEFT : PWM=D0/GPIO0,  DIR=D1/GPIO1(via shifter),  FG=D2/GPIO2(via shifter)
+#   RIGHT: PWM=D3/GPIO21, DIR=D4/GPIO22(via shifter),  FG=D5/GPIO23(via shifter)
+#   BLADE: PWM=D8/GPIO19, DIR=D9/GPIO20(via shifter),  FG=D10/GPIO18(via shifter)
+# ⚠️ BLADE: bench-test with blade REMOVED. Real cutting needs a hardware e-stop + failsafe
+#    (WiFi can drop). For deployment the blade belongs on the F405, not a WiFi board.
+esphome:
+  name: bldc-c6
+  friendly_name: BLDC C6
+  includes: [rc_pwm.h]        # precise interrupt-based RC-PWM capture (F405 S1->D6, S3->D7)
+  on_boot:
+    priority: -100
+    then:
+      - lambda: "rc_pwm_setup();"
+
+esp32:
+  board: esp32-c6-devkitc-1     # XIAO ESP32-C6; needs recent ESPHome
+  framework:
+    type: esp-idf
+
+# ---- BLE drive control (works with WiFi down; phone writes 1 command byte) ----
+# Nordic-UART-style UUIDs. Write to the RX characteristic:
+#   'F'=forward  'B'=reverse  'L'=spin left  'R'=spin right  'S'=stop
+#   optional 2nd byte = speed 0..100 (else uses Drive Speed slider)
+#   'V'+byte      = set Drive Speed only
+# ---- BLE drive control (smooth streaming, no WiFi/proxy) ----
+# Phone writes 2 bytes to the RX characteristic: [throttle, steer], each 0..200 (offset +100,
+# so 100 = center). Reuses the Joy channel -> same arc-mix + deadman. Send [100,100] = stop.
+esp32_ble:
+esp32_ble_server:
+  manufacturer: "PoolRobo"
+  model: "RTK-C6"
+  services:
+    - uuid: "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+      advertise: true
+      characteristics:
+        - id: drive_cmd
+          uuid: "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+          write: true
+          on_write:
+            - lambda: |-
+                if (x.size() < 2) return;
+                int pack = (int) x[0] * 1000 + (int) x[1];   // x[0]=thr+100, x[1]=steer+100
+                if (pack < 0) pack = 0; if (pack > 200200) pack = 200200;
+                auto call = id(joy).make_call();
+                call.set_value(pack);
+                call.perform();
+
+logger:
+# Native API for Home Assistant (ESPHome integration). Coexists with web_server.
+api:
+  encryption:
+    key: !secret api_encryption_key
+web_server:
+  port: 80
+  version: 2          # v2 = stable REST API (/switch/<id>/turn_on, /button/<id>/press,
+                      # /number/<id>/set?value=) with CORS — needed by the phone D-pad
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "BLDC-C6"
+    password: "bench1234"
+  on_disconnect:                 # FAILSAFE: WiFi drops -> kill all motors
+    - output.set_level: { id: pwm_l, level: 0 }
+    - output.set_level: { id: pwm_r, level: 0 }
+    - output.set_level: { id: pwm_b, level: 0 }
+captive_portal:
+
+# ---- PWM speed outputs (LEDC, hardware) — inverted so 0% = stop ----
+output:
+  - { platform: ledc, pin: GPIO0,  frequency: 20000 Hz, id: pwm_l, inverted: true }
+  - { platform: ledc, pin: GPIO21, frequency: 20000 Hz, id: pwm_r, inverted: true }
+  - { platform: ledc, pin: GPIO19, frequency: 20000 Hz, id: pwm_b, inverted: true }
+
+globals:
+  - { id: last_cmd, type: uint32_t, initial_value: '0' }   # millis of last joystick cmd
+
+# DEADMAN: if the joystick stops streaming (finger left / menu popped / app closed /
+# link dropped) the wheels auto-stop within 0.5s. A missed release can't run it away.
+interval:
+  - interval: 150ms
+    then:
+      - lambda: |-
+          if (id(last_cmd) != 0 && (millis() - id(last_cmd) > 1000)) {  // tolerate WiFi jitter;
+            id(pwm_l).set_level(0);                                      // release sends instant stop
+            id(pwm_r).set_level(0);
+            id(last_cmd) = 0;
+          }
+  # ---- RC-PWM IN from the F405 (S1->D6/GPIO16 = left, S3->D7/GPIO17 = right) ----
+  # F405/ArduRover already skid-steer-mixed. C6 just maps each channel straight to one
+  # wheel: 1500us=stop, >1500 fwd, <1500 rev, deflection=speed. Only acts on a valid
+  # 1000-2000us signal; feeds the deadman so RC-loss stops the wheels. F405 PWM ~50Hz.
+  - interval: 50ms
+    then:
+      - lambda: |-
+          float ul = rc_l_us();   // precise interrupt-measured pulse width (0 = no/stale signal)
+          float ur = rc_r_us();
+          bool okl = (ul > 900.0f && ul < 2100.0f);
+          bool okr = (ur > 900.0f && ur < 2100.0f);
+          if (!okl && !okr) return;                  // no RC -> deadman stops / BLE can take over
+          if (okl) {
+            int c = (int)((ul - 1500.0f) / 5.0f);    // -100..100
+            if (c > 100) c = 100; if (c < -100) c = -100; if (c > -6 && c < 6) c = 0;
+            if (c >= 0) id(dir_l).turn_on(); else id(dir_l).turn_off();   // left fwd = dir_l ON
+            id(pwm_l).set_level((c < 0 ? -c : c) / 100.0f);
+          }
+          if (okr) {
+            int c = (int)((ur - 1500.0f) / 5.0f);
+            if (c > 100) c = 100; if (c < -100) c = -100; if (c > -6 && c < 6) c = 0;
+            if (c >= 0) id(dir_r).turn_off(); else id(dir_r).turn_on();   // right fwd = dir_r OFF
+            id(pwm_r).set_level((c < 0 ? -c : c) / 100.0f);
+          }
+          id(last_cmd) = millis();
+
+number:
+  - platform: template
+    name: "Left Speed %"
+    id: spd_l
+    min_value: 0
+    max_value: 100
+    step: 1
+    optimistic: true
+    initial_value: 0
+    restore_value: false
+    set_action: [ output.set_level: { id: pwm_l, level: !lambda "return x/100.0;" } ]
+  - platform: template
+    name: "Right Speed %"
+    id: spd_r
+    min_value: 0
+    max_value: 100
+    step: 1
+    optimistic: true
+    initial_value: 0
+    restore_value: false
+    set_action: [ output.set_level: { id: pwm_r, level: !lambda "return x/100.0;" } ]
+  - platform: template
+    name: "Drive Speed %"                     # master speed for the Forward/Back/turn buttons
+    id: spd_drive
+    min_value: 0
+    max_value: 100
+    step: 5
+    optimistic: true
+    initial_value: 40
+    restore_value: false
+  - platform: template
+    name: "Joy"                                # analog joystick: value = (thr+100)*1000 + (steer+100)
+    id: joy                                    # thr/steer each -100..100 -> differential mix
+    min_value: 0
+    max_value: 200200
+    step: 1
+    optimistic: true
+    initial_value: 100100                      # neutral (thr 0, steer 0)
+    restore_value: false
+    set_action:
+      - lambda: |-
+          int p = (int) x;
+          int thr = p / 1000 - 100;
+          int steer = p % 1000 - 100;
+          int l, r;
+          if (thr > -8 && thr < 8) {            // ~zero throttle -> spin in place (tank)
+            l = steer; r = -steer;
+          } else {                              // arc: both wheels follow throttle, inner slows
+            l = thr; r = thr;
+            if (steer > 0)      r = thr * (100 - steer) / 100;   // steer right -> slow right wheel
+            else if (steer < 0) l = thr * (100 + steer) / 100;   // steer left  -> slow left wheel
+          }
+          if (l > 100) l = 100; if (l < -100) l = -100;
+          if (r > 100) r = 100; if (r < -100) r = -100;
+          if (l >= 0) id(dir_l).turn_on(); else id(dir_l).turn_off();   // left fwd = dir_l ON (flipped)
+          if (r >= 0) id(dir_r).turn_off(); else id(dir_r).turn_on();   // right fwd = dir_r OFF (flipped)
+          id(pwm_l).set_level((l < 0 ? -l : l) / 100.0f);
+          id(pwm_r).set_level((r < 0 ? -r : r) / 100.0f);
+          id(last_cmd) = millis();
+  - platform: template
+    name: "Blade Speed %"
+    id: spd_b
+    min_value: 0
+    max_value: 100
+    step: 1
+    optimistic: true
+    initial_value: 0
+    restore_value: false
+    set_action:
+      - if:                                   # blade only runs when ARMED
+          condition:
+            switch.is_on: blade_arm
+          then:
+            - output.set_level:
+                id: pwm_b
+                level: !lambda "return x/100.0;"
+          else:
+            - output.set_level:
+                id: pwm_b
+                level: 0
+
+switch:
+  - { platform: gpio, name: "Left Direction",  pin: GPIO1,  id: dir_l }
+  - { platform: gpio, name: "Right Direction", pin: GPIO22, id: dir_r }
+  - { platform: gpio, name: "Blade Direction", pin: GPIO20 }
+  - platform: template                        # blade safety arm — off = blade forced to 0
+    name: "Blade ARM"
+    id: blade_arm
+    optimistic: true
+    turn_off_action: [ output.set_level: { id: pwm_b, level: 0 } ]
+  - platform: template
+    name: "STOP ALL"
+    turn_on_action:
+      - number.set: { id: spd_l, value: 0 }
+      - number.set: { id: spd_r, value: 0 }
+      - switch.turn_off: blade_arm
+      - number.set: { id: spd_b, value: 0 }
+
+# ---- Tank-drive buttons — one press moves BOTH wheels together ----
+# Motors mounted mirrored, so "forward" = opposite DIR states on L vs R.
+# If a button drives the ROBOT backward, swap the two dir_l/dir_r lines in it.
+button:
+  - platform: template
+    name: "Forward"                            # REST id -> button/forward  (flipped)
+    on_press:
+      - switch.turn_on:  dir_l
+      - switch.turn_off: dir_r
+      - output.set_level: { id: pwm_l, level: !lambda "return id(spd_drive).state/100.0;" }
+      - output.set_level: { id: pwm_r, level: !lambda "return id(spd_drive).state/100.0;" }
+  - platform: template
+    name: "Reverse"                            # REST id -> button/reverse  (flipped)
+    on_press:
+      - switch.turn_off: dir_l
+      - switch.turn_on:  dir_r
+      - output.set_level: { id: pwm_l, level: !lambda "return id(spd_drive).state/100.0;" }
+      - output.set_level: { id: pwm_r, level: !lambda "return id(spd_drive).state/100.0;" }
+  - platform: template
+    name: "Spin Left"                          # left wheel back, right wheel fwd
+    on_press:
+      - switch.turn_on:  dir_l
+      - switch.turn_on:  dir_r
+      - output.set_level: { id: pwm_l, level: !lambda "return id(spd_drive).state/100.0;" }
+      - output.set_level: { id: pwm_r, level: !lambda "return id(spd_drive).state/100.0;" }
+  - platform: template
+    name: "Spin Right"                         # left wheel fwd, right wheel back
+    on_press:
+      - switch.turn_off: dir_l
+      - switch.turn_off: dir_r
+      - output.set_level: { id: pwm_l, level: !lambda "return id(spd_drive).state/100.0;" }
+      - output.set_level: { id: pwm_r, level: !lambda "return id(spd_drive).state/100.0;" }
+  - platform: template
+    name: "Stop Drive"                         # REST id -> button/stop_drive
+    on_press:
+      - output.set_level: { id: pwm_l, level: 0 }
+      - output.set_level: { id: pwm_r, level: 0 }
+
+# ---- FG feedback (pulse_counter) — all 3, via shifter ----
+sensor:
+  - platform: pulse_counter
+    pin: { number: GPIO2,  mode: { input: true, pullup: true } }
+    name: "Left FG"
+    update_interval: 1s
+    unit_of_measurement: "pulses/min"
+  - platform: pulse_counter
+    pin: { number: GPIO23, mode: { input: true, pullup: true } }
+    name: "Right FG"
+    update_interval: 1s
+    unit_of_measurement: "pulses/min"
+  - platform: pulse_counter
+    pin: { number: GPIO18, mode: { input: true, pullup: true } }
+    name: "Blade FG"
+    update_interval: 1s
+    unit_of_measurement: "pulses/min"
+
+  # ---- RC-PWM inputs from the F405 (precise interrupt capture; see rc_pwm.h) ----
+  # Debug read-outs: actual pulse width in us (~1500 = stop, 0 = no signal).
+  - platform: template
+    name: "RC L us"
+    lambda: "return rc_l_us();"
+    update_interval: 500ms
+    unit_of_measurement: "us"
+  - platform: template
+    name: "RC R us"
+    lambda: "return rc_r_us();"
+    update_interval: 500ms
+    unit_of_measurement: "us"

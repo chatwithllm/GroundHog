@@ -1,0 +1,126 @@
+<style>
+:root{--ink:#0a0e14;--panel:#121a24;--panel2:#0f1621;--line:#22303f;--tx:#e8f0f6;--mut:#8aa0b4;--cy:#47d5e6;--am:#f0a83c;--gn:#54d18a;--rd:#f0655e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--tx);font-family:"Helvetica Neue",Arial,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.ig{max-width:960px;margin:0 auto;padding:0 20px 80px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.eyebrow{font-family:ui-monospace,monospace;font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--cy)}
+section{padding:54px 0;border-top:1px solid var(--line)}
+section:first-of-type{border-top:0}
+h2{font-size:clamp(24px,4vw,34px);font-weight:800;letter-spacing:-.02em;margin:8px 0 26px}
+/* reveal */
+.r{opacity:0;transform:translateY(18px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1);transition-delay:var(--d,0s)}
+.r.in{opacity:1;transform:none}
+/* hero */
+.hero{padding:74px 0 60px;text-align:left}
+.hero h1{font-size:clamp(34px,7vw,68px);font-weight:800;line-height:1.02;letter-spacing:-.03em;margin:14px 0 16px}
+.hero h1 .arrow{color:var(--cy)}
+.hero p{color:var(--mut);font-size:clamp(15px,2.2vw,19px);max-width:60ch;margin:0}
+.tag{display:inline-block;margin-top:22px;font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.1em;color:var(--am);border:1px solid var(--am);border-radius:20px;padding:5px 12px}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.stat .n{font-family:ui-monospace,monospace;font-weight:700;font-size:clamp(26px,5vw,40px);color:var(--cy);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .n .u{font-size:.5em;color:var(--mut);margin-left:3px}
+.stat .l{color:var(--mut);font-size:13px;margin-top:4px}
+/* timeline */
+.tl{position:relative;padding-left:30px}
+.tl:before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--cy),var(--am))}
+.mi{position:relative;padding:0 0 22px 8px}
+.mi .dot{position:absolute;left:-30px;top:2px;width:20px;height:20px;border-radius:50%;background:var(--panel);border:2px solid var(--cy)}
+.mi.blk .dot{border-color:var(--rd)}.mi.dec .dot{border-color:var(--am)}.mi.nx .dot{border-color:var(--mut)}
+.mi h3{margin:0;font-size:17px;font-weight:700}
+.mi p{margin:3px 0 0;color:var(--mut);font-size:13.5px}
+.pill{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.08em;padding:2px 7px;border-radius:5px;margin-left:8px;vertical-align:2px}
+.pill.ok{color:var(--gn);border:1px solid var(--gn)}.pill.bk{color:var(--rd);border:1px solid var(--rd)}.pill.dc{color:var(--am);border:1px solid var(--am)}.pill.nx{color:var(--mut);border:1px solid var(--mut)}
+/* flow */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:13px;font-weight:600;white-space:nowrap}
+.chip .s{display:block;font-family:ui-monospace,monospace;font-size:10px;color:var(--mut);font-weight:400}
+.chev{color:var(--cy);font-size:18px}
+.note{color:var(--mut);font-size:12.5px;margin-top:12px}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.step{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+.step .k{font-family:ui-monospace,monospace;font-size:26px;font-weight:700;color:var(--cy)}
+.step .t{font-weight:700;margin-top:6px;font-size:15px}
+.step .d{color:var(--mut);font-size:12.5px;margin-top:4px}
+.foot{color:var(--mut);font-size:13px;text-align:center;padding-top:40px}
+@media(prefers-reduced-motion:reduce){.r{opacity:1;transform:none;transition:none}}
+</style>
+<div class="ig">
+ <header class="hero">
+  <div class="eyebrow r">Build log · salvage → autonomy</div>
+  <h1 class="r" style="--d:.08s">Pool cleaner <span class="arrow">→</span><br>autonomous RTK rover</h1>
+  <p class="r" style="--d:.16s">A dead cordless pool-bot, stripped for parts and rebuilt into a centimeter-accurate, self-driving ground rover — reusing its motors, encoders, and 24-volt pack.</p>
+  <span class="tag r" style="--d:.24s">no new brain purchased</span>
+ </header>
+
+ <section>
+  <div class="eyebrow r">By the numbers</div>
+  <h2 class="r" style="--d:.05s">What it runs on</h2>
+  <div class="stats">
+   <div class="stat r" style="--d:.00s"><div class="n"><span data-count="24">0</span><span class="u">V</span></div><div class="l">motor rail (6S pack)</div></div>
+   <div class="stat r" style="--d:.06s"><div class="n"><span data-count="5">0</span><span class="u">wires</span></div><div class="l">per motor · driver built in</div></div>
+   <div class="stat r" style="--d:.12s"><div class="n">±<span data-count="2">0</span><span class="u">cm</span></div><div class="l">RTK GPS accuracy</div></div>
+   <div class="stat r" style="--d:.18s"><div class="n"><span data-count="115">0</span><span class="u">Wh</span></div><div class="l">battery energy</div></div>
+   <div class="stat r" style="--d:.24s"><div class="n"><span data-count="8">0</span></div><div class="l">wiring nets</div></div>
+   <div class="stat r" style="--d:.30s"><div class="n"><span data-count="5">0</span></div><div class="l">steps to first drive</div></div>
+  </div>
+ </section>
+
+ <section>
+  <div class="eyebrow r">The journey</div>
+  <h2 class="r" style="--d:.05s">From locked chip to a plan</h2>
+  <div class="tl">
+   <div class="mi r" style="--d:.00s"><span class="dot"></span><h3>Read-lock cracked<span class="pill ok">solved</span></h3><p>Mass-erased the RDP-protected GD32F103 clone; flash writable again.</p></div>
+   <div class="mi r" style="--d:.07s"><span class="dot"></span><h3>Our own firmware runs<span class="pill ok">solved</span></h3><p>Bare-metal build: PWM, ADC, GPIO, bit-bang I²C, UART console — full control.</p></div>
+   <div class="mi r" style="--d:.14s"><span class="dot"></span><h3>24V confirmed live<span class="pill ok">solved</span></h3><p>Metered 24.1V on the board — the pack delivers power; no BMS handshake needed.</p></div>
+   <div class="mi blk r" style="--d:.21s"><span class="dot"></span><h3>Stock motor rail gated<span class="pill bk">blocked</span></h3><p>24V present but switched off before the motor drivers — the stock MCU never powered them.</p></div>
+   <div class="mi dec r" style="--d:.28s"><span class="dot"></span><h3>Motors are BLDC — drive direct<span class="pill dc">decision</span></h3><p>Label reads BLDC5520 24V: driver built into each motor. No brushed driver needed — feed 24V + PWM + DIR; the FG wire returns speed.</p></div>
+   <div class="mi nx r" style="--d:.35s"><span class="dot"></span><h3>Bench spin via ESP32 → then F405<span class="pill nx">next</span></h3><p>Prove one motor on an ESP32 (PWM + DIR + FG), then F405 ArduRover brushed-with-relay ×2 + RTK.</p></div>
+  </div>
+ </section>
+
+ <section>
+  <div class="eyebrow r">The architecture</div>
+  <h2 class="r" style="--d:.05s">How it all connects</h2>
+  <div class="flow">
+   <div class="chip r" style="--d:.00s">GNSS Base<span class="s">RTCM3</span></div><span class="chev r" style="--d:.05s">→</span>
+   <div class="chip r" style="--d:.10s">NTRIP<span class="s">internet</span></div><span class="chev r" style="--d:.15s">→</span>
+   <div class="chip r" style="--d:.20s">Raspberry Pi<span class="s">+ LC29H HAT</span></div><span class="chev r" style="--d:.25s">→</span>
+   <div class="chip r" style="--d:.30s">F405 · ArduRover<span class="s">PWM + DIR ×2</span></div><span class="chev r" style="--d:.35s">→</span>
+   <div class="chip r" style="--d:.40s">BLDC motors<span class="s">integrated driver</span></div>
+  </div>
+  <p class="note r" style="--d:.55s">Pi = companion (RTK corrections, GPS, missions). F405 = real-time brain: PWM speed + DIR into each motor's built-in BLDC driver, fuses GPS + IMU + FG wheel-speed. No external motor driver — the motors drive themselves. One salvaged 24V pack, common ground.</p>
+ </section>
+
+ <section>
+  <div class="eyebrow r">Getting started</div>
+  <h2 class="r" style="--d:.05s">Five steps to first drive</h2>
+  <div class="steps">
+   <div class="step r" style="--d:.00s"><div class="k">1</div><div class="t">ESP32 spin test</div><div class="d">PWM+DIR+FG · wheels up</div></div>
+   <div class="step r" style="--d:.07s"><div class="k">2</div><div class="t">Flash ArduRover</div><div class="d">RadiolinkF405 target</div></div>
+   <div class="step r" style="--d:.14s"><div class="k">3</div><div class="t">Wire ×2 motors</div><div class="d">brushed-with-relay · power off</div></div>
+   <div class="step r" style="--d:.21s"><div class="k">4</div><div class="t">Skid-steer test</div><div class="d">wheels up · fwd/rev/turn</div></div>
+   <div class="step r" style="--d:.28s"><div class="k">5</div><div class="t">RTK + waypoints</div><div class="d">autonomous missions</div></div>
+  </div>
+ </section>
+
+ <div class="foot r">Pool-Robo RTK · reuse over replace</div>
+</div>
+<script>
+(function(){
+ var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+ var rs=[].slice.call(document.querySelectorAll('.r'));
+ function countUp(el){var t=+el.getAttribute('data-count'),dur=1100,st=null;
+  function step(ts){if(!st)st=ts;var p=Math.min(1,(ts-st)/dur),e=1-Math.pow(1-p,3);el.textContent=Math.round(t*e);if(p<1)requestAnimationFrame(step);else el.textContent=t;}
+  requestAnimationFrame(step);}
+ if(reduce){rs.forEach(function(e){e.classList.add('in');});document.querySelectorAll('[data-count]').forEach(function(e){e.textContent=e.getAttribute('data-count');});return;}
+ var io=new IntersectionObserver(function(en){en.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');var c=x.target.querySelectorAll?x.target.querySelectorAll('[data-count]'):[];c.forEach(countUp);if(x.target.matches&&x.target.matches('[data-count]'))countUp(x.target);io.unobserve(x.target);}});},{threshold:.2});
+ rs.forEach(function(e){io.observe(e);});
+ // hero animates immediately on load
+ setTimeout(function(){document.querySelectorAll('.hero .r').forEach(function(e){e.classList.add('in');});},60);
+})();
+</script>

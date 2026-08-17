@@ -1,0 +1,30 @@
+# --- Secrets — NEVER commit (public repo) ---
+firmware/esphome/secrets.yaml
+*.pem
+*api_key*
+*.env
+.env
+
+# --- ESPHome build cache (≈1GB, regenerable) ---
+firmware/esphome/.esphome/
+
+# --- Arduino / PlatformIO build outputs ---
+**/build/
+*.elf
+*.map
+*.bin
+*.hex
+*.o
+*.a
+
+# --- Python ---
+__pycache__/
+*.pyc
+
+# --- Logs ---
+*.log
+logs/
+
+# --- OS cruft ---
+.DS_Store
+Thumbs.db

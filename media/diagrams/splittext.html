@@ -1,0 +1,63 @@
+<style>
+:root{--ink:#080b11;--tx:#eef4f9;--mut:#7f95a8;--cy:#4cd6e8;--am:#f2ae44}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#12202c 0%,var(--ink) 60%);color:var(--tx);font-family:"Helvetica Neue",Arial,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.stage{min-height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:8vh 22px;gap:18px}
+.eyebrow{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:clamp(11px,1.6vw,14px);letter-spacing:.42em;text-transform:uppercase;color:var(--cy);opacity:0;transform:translateY(10px);transition:opacity .7s ease,transform .7s ease}
+.go .eyebrow{opacity:1;transform:none}
+h1{margin:0;font-weight:800;letter-spacing:-.03em;line-height:.96;font-size:clamp(40px,11vw,128px)}
+h1 .l2{color:var(--cy)}
+.sub{margin-top:10px;color:var(--mut);font-size:clamp(14px,2.4vw,22px);font-weight:500;letter-spacing:.01em}
+/* split mechanics */
+.split{}
+.word{display:inline-block;white-space:nowrap}
+.m{display:inline-block;overflow:hidden;vertical-align:top;line-height:1.06}
+.c{display:inline-block;transform:translateY(112%) rotate(4deg);opacity:0;transition:transform .62s cubic-bezier(.22,.86,.24,1),opacity .5s ease;transition-delay:calc(var(--i,0)*.028s)}
+.go .c{transform:none;opacity:1}
+.sub .c{transition-duration:.5s;transition-delay:calc(var(--i,0)*.02s + .15s)}
+.bar{position:fixed;left:0;right:0;bottom:22px;display:flex;justify-content:center;gap:10px}
+button{font-family:ui-monospace,monospace;font-size:13px;border:1px solid #2a3a49;background:#0e1721;color:var(--tx);padding:9px 18px;border-radius:22px;cursor:pointer}
+button:hover{border-color:var(--cy)}
+button:focus-visible{outline:3px solid var(--cy);outline-offset:2px}
+.hintline{position:fixed;top:20px;left:0;right:0;text-align:center;color:var(--mut);font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.2em;opacity:0;transition:opacity 1s ease .1s}
+.go .hintline{opacity:.6}
+@media(prefers-reduced-motion:reduce){.c{transform:none;opacity:1;transition:none}.eyebrow{opacity:1;transform:none;transition:none}}
+</style>
+<div class="hintline">SPLIT-TEXT REVEAL</div>
+<div class="stage" id="stage">
+ <div class="eyebrow">Pool-Robo · Build Log</div>
+ <h1>
+  <span class="split l1">Pool Cleaner</span><br>
+  <span class="split l2">to RTK Rover</span>
+ </h1>
+ <div class="sub split">salvaged · unlocked · rebuilt · autonomous</div>
+</div>
+<div class="bar"><button id="replay">↻ Replay</button></div>
+<script>
+(function(){
+ var stage=document.getElementById('stage');
+ var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+ // split each .split element into char masks, continuous index across elements
+ var idx=0;
+ [].slice.call(document.querySelectorAll('.split')).forEach(function(el){
+  var text=el.textContent; el.textContent='';
+  text.split(' ').forEach(function(word,wi,arr){
+   var ws=document.createElement('span'); ws.className='word';
+   for(var k=0;k<word.length;k++){
+    var m=document.createElement('span'); m.className='m';
+    var c=document.createElement('span'); c.className='c'; c.style.setProperty('--i',idx++); c.textContent=word[k];
+    m.appendChild(c); ws.appendChild(m);
+   }
+   el.appendChild(ws);
+   if(wi<arr.length-1) el.appendChild(document.createTextNode(' '));
+  });
+ });
+ function play(){
+  stage.classList.remove('go'); void stage.offsetWidth; // reflow to restart
+  requestAnimationFrame(function(){requestAnimationFrame(function(){stage.classList.add('go');});});
+ }
+ document.getElementById('replay').addEventListener('click',play);
+ if(reduce){stage.classList.add('go');} else {setTimeout(play,120);}
+})();
+</script>

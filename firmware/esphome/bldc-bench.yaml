@@ -1,0 +1,77 @@
+# BLDC5520 bench test — Seeed XIAO ESP32-C3
+# Wire (CONFIRMED): red=VCC->pack24V, black=GND->common,
+#   blue=PWM->D1/GPIO3, yellow=CW/CCW->D2/GPIO4, green=FG->D3/GPIO5
+# XIAO powered by USB. NEVER put 24V on the XIAO. Wheels up. Blade never first.
+esphome:
+  name: bldc-bench
+  friendly_name: BLDC Bench
+
+esp32:
+  board: seeed_xiao_esp32c3      # if compile complains, use: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+logger:
+web_server:                      # browser dashboard at the XIAO's IP
+  port: 80
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:                            # fallback hotspot if wifi fails
+    ssid: "BLDC-Bench"
+    password: "bench1234"
+captive_portal:
+
+# --- PWM speed (blue -> D1/GPIO3) ---
+output:
+  - platform: ledc
+    id: motor_pwm
+    pin: GPIO3
+    frequency: 20000 Hz
+    inverted: true             # this driver is active-low: 0%=full, so invert -> 0 slider = stop
+
+# Speed slider 0-100 % -> duty
+number:
+  - platform: template
+    name: "Motor Speed %"
+    id: motor_speed
+    min_value: 0
+    max_value: 100
+    step: 1
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    set_action:
+      - output.set_level:
+          id: motor_pwm
+          level: !lambda "return x / 100.0;"
+
+# --- Direction (yellow -> D2/GPIO4) ---
+switch:
+  - platform: gpio
+    name: "Direction CW-CCW"
+    id: motor_dir
+    pin: GPIO4
+  - platform: template          # panic stop -> speed 0
+    name: "STOP"
+    turn_on_action:
+      - number.set:
+          id: motor_speed
+          value: 0
+
+# --- FG feedback (green -> D3/GPIO5) ---
+sensor:
+  - platform: pulse_counter
+    pin:
+      number: GPIO5
+      mode:
+        input: true
+        pullup: true
+    name: "FG frequency"
+    id: motor_fg
+    unit_of_measurement: "pulses/min"
+    update_interval: 1s
+    # RPM = (pulses/min) / (pulses_per_rev).  pulses_per_rev unknown -> calibrate:
+    # spin at fixed speed, count revs by eye for 10s, compute. Then add a
+    # 'filters: - multiply: (1/ppr)' + unit "rpm" once known.

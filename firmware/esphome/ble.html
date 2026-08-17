@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>RTK Rover BLE</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --edge:#30363d; --ink:#e6edf3; --mut:#8b949e;
+    --stick:#7b3ff2; --ring:#2a2350; --stop:#da3633; --go:#2ea043; --warnc:#d29922;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:none;}
+  html,body{margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow:hidden;}
+  body{display:flex; flex-direction:column; padding:12px; gap:12px; max-width:520px; margin:0 auto;}
+  header{display:flex; align-items:center; justify-content:space-between;}
+  h1{font-size:16px; margin:0; font-weight:700;} h1 small{color:var(--stick); font-weight:800;}
+  .log{font-family:ui-monospace,monospace; font-size:11px; color:var(--mut);}
+
+  /* gauges */
+  .gauges{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .g{background:var(--panel); border:1px solid var(--edge); border-radius:12px; padding:10px 8px; text-align:center;}
+  .g .val{font-size:26px; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums;}
+  .g .unit{font-size:11px; color:var(--mut); margin-top:2px; text-transform:uppercase; letter-spacing:.5px;}
+  .g.link .val{font-size:18px; padding-top:5px;}
+  .bars{display:inline-flex; gap:3px; align-items:flex-end; height:22px;}
+  .bars i{width:6px; background:var(--edge); border-radius:1px;}
+  .bars i:nth-child(1){height:8px;} .bars i:nth-child(2){height:14px;} .bars i:nth-child(3){height:20px;}
+  .bars.s1 i:nth-child(1){background:var(--stop);}
+  .bars.s2 i:nth-child(1),.bars.s2 i:nth-child(2){background:var(--warnc);}
+  .bars.s3 i{background:var(--go);}
+
+  .connect{border:none; border-radius:14px; background:var(--stick); color:#fff; font-size:19px; font-weight:800; padding:16px;}
+  .connect:active{filter:brightness(1.2);}
+  .warn{background:#3a2a12; border:1px solid #7a5a1a; color:#f0c674; border-radius:10px; padding:12px; font-size:13px; line-height:1.5;}
+  .hide{display:none !important;}
+
+  .speed{background:var(--panel); border:1px solid var(--edge); border-radius:12px; padding:10px 12px;}
+  .speed label{display:flex; justify-content:space-between; font-size:13px; color:var(--mut); margin-bottom:6px;}
+  .speed b{color:var(--ink); font-size:15px;}
+  input[type=range]{width:100%; height:30px; accent-color:var(--stick); touch-action:none;}
+
+  .toggles{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .tg{border:1px solid var(--edge); background:var(--panel); color:var(--ink); border-radius:12px;
+    padding:12px 4px; font-size:14px; font-weight:700;}
+  .tg.on{background:var(--stick); border-color:var(--stick); color:#fff;}
+
+  .joywrap{flex:1; display:flex; align-items:center; justify-content:center; min-height:280px;}
+  #joy{position:relative; width:300px; height:300px; max-width:80vw; max-height:80vw; border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, #1a1240 0%, var(--panel) 70%); border:2px solid var(--ring); touch-action:none;}
+  .tick{position:absolute; pointer-events:none;}
+  .mk{width:2px; height:12px; background:#6a5cc0; border-radius:1px;}
+  .tl{font-size:11px; color:#8f82d0; font-weight:700; width:18px; text-align:center;}
+  #thumb{position:absolute; width:92px; height:92px; left:50%; top:50%; margin:-46px 0 0 -46px; border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, #a06bff, var(--stick)); box-shadow:0 6px 18px rgba(0,0,0,.5); transition:transform .08s ease-out;}
+  #thumb.live{transition:none;}
+  .stopbtn{border:none; border-radius:14px; background:var(--stop); color:#fff; font-size:20px; font-weight:800; padding:16px;}
+  .stopbtn:active{filter:brightness(1.2);}
+  .hint{text-align:center; color:var(--mut); font-size:11px; line-height:1.5;}
+</style>
+</head>
+<body>
+  <header>
+    <h1>RTK Rover <small>BLE</small></h1>
+    <span class="log" id="log">tap Connect</span>
+  </header>
+
+  <div class="gauges">
+    <div class="g"><div class="val" id="mph">0.0</div><div class="unit">mph</div></div>
+    <div class="g link"><div class="val"><span class="bars" id="bars"><i></i><i></i><i></i></span></div><div class="unit" id="linkt">no link</div></div>
+    <div class="g"><div class="val" id="thrv">0</div><div class="unit">throttle %</div></div>
+  </div>
+
+  <div class="warn hide" id="warn"></div>
+  <button class="connect" id="conn">🔗 Connect to BLDC&nbsp;C6</button>
+
+  <div id="ctl" class="hide" style="display:flex; flex-direction:column; gap:12px; flex:1;">
+    <div class="speed">
+      <label>Max Speed <b><span id="spdVal">40</span>%</b></label>
+      <input type="range" id="spd" min="10" max="100" step="5" value="40">
+    </div>
+    <div class="toggles">
+      <button class="tg" id="cruise">🅒 Cruise</button>
+      <button class="tg" id="snap">⛯ Snap</button>
+      <button class="tg" id="flip">🔄 Flip</button>
+    </div>
+    <div class="joywrap"><div id="joy"><div id="thumb"></div></div></div>
+    <button class="stopbtn" id="stop">■ STOP</button>
+    <div class="hint">Push to drive · release = stop. Cruise holds throttle · Snap locks heading to ticks.</div>
+  </div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const log=$('#log'), conn=$('#conn'), ctl=$('#ctl'), warn=$('#warn'),
+        joy=$('#joy'), thumb=$('#thumb'), spd=$('#spd'), spdVal=$('#spdVal'),
+        mphEl=$('#mph'), thrvEl=$('#thrv'), bars=$('#bars'), linkt=$('#linkt');
+
+  const SVC='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+  const CHR='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+  const MPH_PER_PULSE = 0.00018;   // <-- CALIBRATE: mph per (pulses/min). tune after a measured run.
+
+  if (!navigator.bluetooth){
+    warn.classList.remove('hide');
+    warn.innerHTML = "This browser has no Web Bluetooth.<br>Android: use <b>Chrome</b> (with the insecure-origin flag). iPhone: <b>Bluefy</b>.";
+    conn.disabled = true; conn.style.opacity = .5;
+  }
+
+  // ---------- BLE (serialized, latest-wins) ----------
+  let chr=null, dev=null, writing=false, pending=null, tSent=0;
+  const clampi = v => v<-100?-100 : v>100?100 : Math.round(v);
+  function setLink(level){ // 0 none,1 weak,2 ok,3 strong
+    bars.className = 'bars s'+level;
+    linkt.textContent = ['no link','weak','ok','strong'][level];
+  }
+  function pump(){
+    if(writing || !chr || pending===null) return;
+    const b=pending; pending=null; writing=true; tSent=performance.now();
+    chr.writeValue(b)
+      .then(()=>{ const dt=performance.now()-tSent; setLink(dt<70?3:dt<200?2:1); })
+      .catch(()=>{ setLink(1); })
+      .finally(()=>{ writing=false; pump(); });
+  }
+  function writeCmd(thr, steer){
+    if(!chr) return;
+    thrvEl.textContent = clampi(thr);
+    pending = new Uint8Array([clampi(thr)+100, clampi(steer)+100]);
+    pump();
+  }
+  const neutral = () => writeCmd(0,0);
+
+  async function connect(){
+    try{
+      log.textContent='scanning…';
+      dev = await navigator.bluetooth.requestDevice({
+        filters:[{namePrefix:'bldc'},{namePrefix:'BLDC'},{services:[SVC]}], optionalServices:[SVC]});
+      dev.addEventListener('gattserverdisconnected', onDisc);
+      log.textContent='connecting…';
+      const g=await dev.gatt.connect(); const s=await g.getPrimaryService(SVC);
+      chr=await s.getCharacteristic(CHR);
+      log.textContent='connected'; setLink(3);
+      conn.classList.add('hide'); ctl.classList.remove('hide'); neutral();
+      requestAnimationFrame(()=>window.__drawTicks && window.__drawTicks());
+    }catch(e){ setLink(0); log.textContent=(''+e).slice(0,38); }
+  }
+  function onDisc(){ chr=null; setLink(0); log.textContent='disconnected'; ctl.classList.add('hide'); conn.classList.remove('hide'); }
+  conn.addEventListener('click', connect);
+
+  // ---------- speed telemetry via proxy (real FG), independent of BLE ----------
+  async function pollSpeed(){
+    try{
+      const [l,r] = await Promise.all([
+        fetch('/api/sensor/Left%20FG').then(x=>x.json()),
+        fetch('/api/sensor/Right%20FG').then(x=>x.json())]);
+      const fg = Math.max(parseFloat(l.value)||0, parseFloat(r.value)||0);
+      mphEl.textContent = (fg*MPH_PER_PULSE).toFixed(1);
+    }catch(e){ /* telemetry (WiFi) down; keep last */ }
+  }
+  setInterval(pollSpeed, 600);
+
+  // ---------- joystick ----------
+  spd.addEventListener('input', () => { spdVal.textContent = spd.value; });
+  let activeJ=false, curThr=0, curSteer=0, lastThr=0, lastSteer=0, lastDx=0, lastDy=0;
+  const R = () => joy.clientWidth/2 - 20;
+
+  // snap angles (deg from forward; mirrored + reverse)
+  const SNAP=[0,30,45,60,90,120,135,150,180];
+  let snapOn=false;
+  function snapAngle(a){ const s=a<0?-1:1, m=Math.abs(a); let best=0,bd=1e9;
+    for(const v of SNAP){ const d=Math.abs(m-v); if(d<bd){bd=d;best=v;} } return best*s; }
+
+  function place(dx,dy){
+    const r=R(); let mag=Math.min(Math.hypot(dx,dy), r);
+    if(snapOn && mag>6){
+      let ang=Math.atan2(dx,-dy)*180/Math.PI;      // 0=up, + = right
+      ang=snapAngle(ang); const ar=ang*Math.PI/180;
+      dx=Math.sin(ar)*mag; dy=-Math.cos(ar)*mag;
+    } else if(mag>r){ dx=dx/Math.hypot(dx,dy)*r; dy=dy/Math.hypot(dx,dy)*r; }
+    thumb.style.transform=`translate(${dx}px,${dy}px)`;
+    const sc=spd.value/100;
+    curSteer=-(dx/r)*100*sc;  curThr=-(dy/r)*100*sc;
+    lastThr=curThr; lastSteer=curSteer; lastDx=dx; lastDy=dy;   // remember for cruise-lock
+  }
+  const center=()=>{ thumb.style.transform='translate(0,0)'; curThr=0; curSteer=0; };
+  const xy=e=>{ const b=joy.getBoundingClientRect(); return [e.clientX-b.left-b.width/2, e.clientY-b.top-b.height/2]; };
+
+  joy.addEventListener('pointerdown', e=>{ e.preventDefault(); activeJ=true; thumb.classList.add('live');
+    try{ joy.setPointerCapture(e.pointerId); }catch(_){}; place(...xy(e)); });
+  joy.addEventListener('pointermove', e=>{ if(activeJ){ e.preventDefault(); place(...xy(e)); } });
+  const release=e=>{ if(!activeJ) return; e&&e.preventDefault(); activeJ=false; thumb.classList.remove('live');
+    if(cruiseOn){ thumb.style.transform=`translate(${cdx}px,${cdy}px)`; }   // hold locked heading + show it
+    else { center(); neutral(); } };
+  joy.addEventListener('pointerup', release);
+  joy.addEventListener('pointercancel', release);
+  joy.addEventListener('pointerleave', release);
+  window.addEventListener('blur', release);
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ release(); cruiseOff(); } });
+
+  // ---------- cruise / flip ----------
+  let cruiseOn=false, flipOn=false, cruiseThr=0, cruiseSteer=0, cdx=0, cdy=0;
+  function cruiseOff(){ cruiseOn=false; $('#cruise').classList.remove('on'); center(); }
+  function tx(thr, steer){ if(flipOn){ thr=-thr; steer=-steer; } writeCmd(thr, steer); }  // flip = reverse-view driving
+  $('#cruise').addEventListener('click', ()=>{
+    if(cruiseOn){ cruiseOff(); neutral(); return; }
+    cruiseOn=true; $('#cruise').classList.add('on');
+    // lock the current (or last) stick vector -> hold that heading+throttle; thumb shows it
+    const moved = activeJ || Math.abs(lastThr)>=5 || Math.abs(lastSteer)>=5;
+    if(moved){ cruiseThr=activeJ?curThr:lastThr; cruiseSteer=activeJ?curSteer:lastSteer; cdx=lastDx; cdy=lastDy; }
+    else { cruiseThr=Number(spd.value); cruiseSteer=0; cdx=0; cdy=-(R()-46); }   // no prior stick -> straight
+    thumb.style.transform=`translate(${cdx}px,${cdy}px)`;
+  });
+  $('#snap').addEventListener('click', ()=>{ snapOn=!snapOn; $('#snap').classList.toggle('on', snapOn); });
+  $('#flip').addEventListener('click', ()=>{ flipOn=!flipOn; $('#flip').classList.toggle('on', flipOn); });
+
+  // ---------- 20 Hz sender: stick > cruise > stop ----------
+  setInterval(()=>{
+    if(activeJ)        tx(curThr, curSteer);
+    else if(cruiseOn)  tx(cruiseThr, cruiseSteer);   // cruise = locked heading (angle + throttle)
+  }, 50);
+
+  $('#stop').addEventListener('pointerdown', e=>{ e.preventDefault(); release(); cruiseOff(); neutral(); });
+
+  // ---------- draw angle ticks (px-accurate; labels 0/30/45/60/90 from BOTH axes) ----------
+  const TICKS=[0,30,45,60,90,120,135,150,180,-30,-45,-60,-90,-120,-135,-150];
+  const LBL={'0':'0','30':'30','45':'45','60':'60','90':'90','120':'60','135':'45','150':'30','180':'0',
+             '-30':'30','-45':'45','-60':'60','-90':'90','-120':'60','-135':'45','-150':'30'};
+  function drawTicks(){
+    joy.querySelectorAll('.tick').forEach(n=>n.remove());
+    const R=joy.clientWidth/2; if(R<20) return;
+    const rMk=R-13, rTl=R-30;
+    for(const a of TICKS){
+      const ar=a*Math.PI/180, sx=Math.sin(ar), cy=-Math.cos(ar);
+      const mk=document.createElement('div'); mk.className='tick mk';
+      mk.style.left=(R+sx*rMk)+'px'; mk.style.top=(R+cy*rMk)+'px';
+      mk.style.transform=`translate(-50%,-50%) rotate(${a}deg)`;
+      joy.appendChild(mk);
+      if(LBL[a]!==undefined){ const tl=document.createElement('div'); tl.className='tick tl';
+        tl.style.left=(R+sx*rTl)+'px'; tl.style.top=(R+cy*rTl)+'px'; tl.style.transform='translate(-50%,-50%)';
+        tl.textContent=LBL[a]; joy.appendChild(tl); }
+    }
+  }
+  window.addEventListener('resize', drawTicks);
+  window.__drawTicks = drawTicks;   // called after the control panel becomes visible (connect)
+})();
+</script>
+</body>
+</html>

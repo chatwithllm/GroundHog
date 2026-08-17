@@ -1,0 +1,270 @@
+<style>
+:root{color-scheme:dark;--bg:#0d1117;--panel:#161d27;--line:#26313f;--ink:#e7edf3;--mut:#8ea1b4;--grid:#1b2531;--acc:#4cc4e0}
+:root.light{color-scheme:light;--bg:#eef2f6;--panel:#ffffff;--line:#cfd8e2;--ink:#1c2530;--mut:#5a6b7b;--grid:#e2e8ef;--acc:#0e7fa6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:14px}
+h1{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:18px;letter-spacing:.04em;margin:2px 0}
+.sub{color:var(--mut);font-size:13px;margin:0 0 10px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px;margin-bottom:10px}
+button{font-family:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 13px;border-radius:9px;cursor:pointer}
+button.pri{background:var(--acc);color:#04222c;border-color:var(--acc);font-weight:700}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+label.ck{font-size:13px;color:var(--mut);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.lg{display:inline-flex;align-items:center;gap:5px;font:600 11px ui-monospace,monospace;border:1px solid var(--line);border-radius:20px;padding:3px 9px;cursor:pointer;user-select:none}
+.lg .dot{width:11px;height:11px;border-radius:50%}
+.lg.off{opacity:.32}
+.lg.solo{outline:2px solid var(--acc)}
+.stage-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;overflow:auto}
+#stage{position:relative;width:960px;height:660px;background:
+  linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+  linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px;
+  border-radius:10px;touch-action:none}
+#wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.tile{position:absolute;background:var(--panel);border:2px solid var(--line);border-radius:11px;padding:8px 10px;cursor:grab;touch-action:none;box-shadow:0 4px 12px rgba(0,0,0,.28);user-select:none;z-index:2}
+.tile:active{cursor:grabbing}
+.tile.hat{border-style:dashed;border-color:#2f9e44}
+.tile .tt{font:700 13px ui-sans-serif,system-ui;margin-bottom:3px}
+.tile .pp{font:11px ui-monospace,monospace;color:var(--mut);line-height:1.5;white-space:nowrap}
+.wlabel{font:700 10px ui-monospace,monospace;paint-order:stroke;stroke:var(--panel);stroke-width:3px}
+.wire{pointer-events:none}
+.hit{pointer-events:stroke;cursor:grab}
+.grip{fill:var(--panel);stroke:var(--ink);stroke-width:2;pointer-events:all;cursor:grab;touch-action:none}
+.gripadd{fill:none;stroke:var(--mut);stroke-width:1.6;stroke-dasharray:3 3;pointer-events:all;cursor:copy;touch-action:none}
+.hint{color:var(--mut);font-size:12px;margin-top:8px}
+</style>
+<div class="wrap">
+<h1>RTK Rover — Wiring Planner</h1>
+<p class="sub"><b>Robot mower — 3 BLDC motors</b> (2 drive + 1 blade), each with a built-in driver, no MDDS30. Drive: 24V+GND+PWM+DIR+FG. Blade: 24V via <b>relay + e-stop</b> + PWM + FG (independent of drive). Bench-drive with an ESP32; F405/ArduRover for autonomy. Drag tiles; <b>tap a wire to select</b> then drag to reroute; tap a net chip to isolate.</p>
+<div class="bar">
+<button class="pri" id="save">Save layout</button>
+<button id="reset">Reset</button>
+<button id="theme">☀ Light</button>
+<label class="ck"><input type="checkbox" id="snap" checked> snap grid</label>
+<label class="ck"><input type="checkbox" id="labels" checked> labels</label>
+<label class="ck"><input type="checkbox" id="ortho" checked> right-angle</label>
+<label class="ck"><input type="checkbox" id="hops" checked> hops</label>
+<span class="legend" id="legend"></span>
+</div>
+<div class="stage-wrap"><div id="stage"><svg id="wires"></svg></div></div>
+<p class="hint" id="hint">Tap a wire to select + move it. Drag dotted handles to add bends, solid handles to move them, double-tap a bend to remove it. Tap empty space to deselect.</p>
+</div>
+<script>
+var NETS={
+ v24:{c:'#e6194b',n:'24V'}, v5:{c:'#f58231',n:'5V'}, gnd:{c:'#7a8797',n:'GND'},
+ pwm:{c:'#4363d8',n:'PWM'}, dir:{c:'#f032e6',n:'DIR'}, gps:{c:'#2f9e44',n:'GPS/RTK'},
+ usb:{c:'#0ba5c4',n:'MAVLink'}, fg:{c:'#0f8a8a',n:'FG'}
+};
+var DEF=[
+ {id:'bat', t:'6S 24V PACK', p:['PWR+  GND','(charges via board)'], x:30,y:40,w:160,h:64},
+ {id:'ubec',t:'UBEC 24V→5V', p:['IN±  5V/GND'], x:30,y:170,w:160,h:64},
+ {id:'lm',  t:'LEFT MOTOR (BLDC)', p:['24V  GND','PWM DIR FG'], x:320,y:500,w:180,h:68},
+ {id:'rm',  t:'RIGHT MOTOR (BLDC)', p:['24V  GND','PWM DIR FG'], x:540,y:500,w:180,h:68},
+ {id:'bm',  t:'BLADE MOTOR (BLDC)', p:['24V(relay) GND','PWM  FG'], x:70,y:500,w:190,h:68},
+ {id:'fc',  t:'RADIOLINK F405', p:['5V GND','PWM×2 (speed)','DIR×2 (relay)','FG×2 in · USB'], x:700,y:60,w:200,h:132},
+ {id:'gps', t:'LC29H RTK (HAT)', p:['on Pi header','+ antenna'], x:700,y:330,w:200,h:60,hat:true},
+ {id:'pi',  t:'RASPBERRY Pi 4', p:['5V GND USB','UART→LC29H'], x:700,y:440,w:200,h:88}
+];
+// Motors are BLDC with integrated drivers: 24V+GND power them, PWM=speed, DIR=direction, FG=speed feedback. No external motor driver.
+var WIRES=[
+ {a:'bat',b:'lm',net:'v24',l:'PWR+ → L 24V (red)',mids:[]},
+ {a:'bat',b:'rm',net:'v24',l:'PWR+ → R 24V (red)',mids:[]},
+ {a:'bat',b:'ubec',net:'v24',l:'PWR → IN',mids:[]},
+ {a:'ubec',b:'fc',net:'v5',l:'5V / GND → F405',mids:[]},
+ {a:'ubec',b:'pi',net:'v5',l:'5V / GND → Pi',mids:[]},
+ {a:'bat',b:'pi',net:'gnd',l:'common ground',mids:[]},
+ {a:'bat',b:'lm',net:'gnd',l:'GND → L (black)',mids:[]},
+ {a:'bat',b:'rm',net:'gnd',l:'GND → R (black)',mids:[]},
+ {a:'fc',b:'lm',net:'pwm',l:'PWM → L blue (speed)',mids:[]},
+ {a:'fc',b:'rm',net:'pwm',l:'PWM → R blue (speed)',mids:[]},
+ {a:'fc',b:'lm',net:'dir',l:'DIR → L yellow',mids:[]},
+ {a:'fc',b:'rm',net:'dir',l:'DIR → R yellow',mids:[]},
+ {a:'lm',b:'fc',net:'fg',l:'FG L green → F405 in',mids:[]},
+ {a:'rm',b:'fc',net:'fg',l:'FG R green → F405 in',mids:[]},
+ {a:'bat',b:'bm',net:'v24',l:'24V → blade (via relay + e-stop)',mids:[]},
+ {a:'bat',b:'bm',net:'gnd',l:'GND → blade',mids:[]},
+ {a:'fc',b:'bm',net:'pwm',l:'PWM → blade (speed / on-off)',mids:[]},
+ {a:'bm',b:'fc',net:'fg',l:'FG blade → F405 in',mids:[]},
+ {a:'gps',b:'pi',net:'gps',l:'HAT on Pi UART · NTRIP→RTCM',mids:[]},
+ {a:'pi',b:'fc',net:'usb',l:'USB MAVLink · GPS_INPUT',mids:[]}
+];
+var KEY='rover_layout_v6';
+var stage=document.getElementById('stage'), svg=document.getElementById('wires');
+var tiles={}, off={}, soloNet=null, ANCH={}, selectedWire=null;
+function center(o){return {x:o.x+o.w/2,y:o.y+o.h/2};}
+function pickEdge(o,tc){var c=center(o),dx=tc.x-c.x,dy=tc.y-c.y;return Math.abs(dx)>=Math.abs(dy)?(dx>=0?'right':'left'):(dy>=0?'bottom':'top');}
+function edgePoint(o,e,f){
+ if(e==='left')return{x:o.x,y:o.y+o.h*f,nx:-1,ny:0};
+ if(e==='right')return{x:o.x+o.w,y:o.y+o.h*f,nx:1,ny:0};
+ if(e==='top')return{x:o.x+o.w*f,y:o.y,nx:0,ny:-1};
+ return{x:o.x+o.w*f,y:o.y+o.h,nx:0,ny:1};
+}
+function rounded(pts,r){
+ if(pts.length<3)return 'M '+pts[0].x.toFixed(1)+' '+pts[0].y.toFixed(1)+' L '+pts[pts.length-1].x.toFixed(1)+' '+pts[pts.length-1].y.toFixed(1);
+ var d='M '+pts[0].x.toFixed(1)+' '+pts[0].y.toFixed(1);
+ for(var i=1;i<pts.length-1;i++){var p=pts[i-1],c=pts[i],n=pts[i+1];
+  var v1x=c.x-p.x,v1y=c.y-p.y,l1=Math.hypot(v1x,v1y)||1,v2x=n.x-c.x,v2y=n.y-c.y,l2=Math.hypot(v2x,v2y)||1,rr=Math.min(r,l1/2,l2/2);
+  d+=' L '+(c.x-v1x/l1*rr).toFixed(1)+' '+(c.y-v1y/l1*rr).toFixed(1)+' Q '+c.x.toFixed(1)+' '+c.y.toFixed(1)+' '+(c.x+v2x/l2*rr).toFixed(1)+' '+(c.y+v2y/l2*rr).toFixed(1);}
+ var la=pts[pts.length-1];return d+' L '+la.x.toFixed(1)+' '+la.y.toFixed(1);
+}
+function orthoPts(A,B,i){
+ var stub=22,lane=((i%6)-2.5)*9,As={x:A.x+A.nx*stub,y:A.y+A.ny*stub},Bs={x:B.x+B.nx*stub,y:B.y+B.ny*stub},Ah=A.nx!==0,Bh=B.nx!==0,pts=[{x:A.x,y:A.y},As];
+ if(Ah&&Bh){var mx=(As.x+Bs.x)/2+lane;pts.push({x:mx,y:As.y},{x:mx,y:Bs.y});}
+ else if(!Ah&&!Bh){var my=(As.y+Bs.y)/2+lane;pts.push({x:As.x,y:my},{x:Bs.x,y:my});}
+ else if(Ah)pts.push({x:Bs.x,y:As.y}); else pts.push({x:As.x,y:Bs.y});
+ pts.push(Bs,{x:B.x,y:B.y});return pts;
+}
+function pathFor(i){
+ var w=WIRES[i],A=ANCH[i+'a'],B=ANCH[i+'b'];if(!A||!B)return '';
+ var mids=w.mids||[], ortho=document.getElementById('ortho').checked;
+ if(mids.length===0){
+  if(ortho)return rounded(orthoPts(A,B,i),11);
+  var dist=Math.hypot(B.x-A.x,B.y-A.y),K=Math.max(34,Math.min(dist*0.45,110));
+  return 'M '+A.x.toFixed(1)+' '+A.y.toFixed(1)+' C '+(A.x+A.nx*K).toFixed(1)+' '+(A.y+A.ny*K).toFixed(1)+' '+(B.x+B.nx*K).toFixed(1)+' '+(B.y+B.ny*K).toFixed(1)+' '+B.x.toFixed(1)+' '+B.y.toFixed(1);
+ }
+ var stub=16,pts=[{x:A.x,y:A.y},{x:A.x+A.nx*stub,y:A.y+A.ny*stub}];
+ mids.forEach(function(m){pts.push({x:m.x,y:m.y});});
+ pts.push({x:B.x+B.nx*stub,y:B.y+B.ny*stub},{x:B.x,y:B.y});
+ return rounded(pts,12);
+}
+function buildPoly(i){var A=ANCH[i+'a'],B=ANCH[i+'b'],w=WIRES[i];if(!A||!B)return[{x:0,y:0},{x:0,y:0}];
+ var mids=w.mids||[],ortho=document.getElementById('ortho').checked;
+ if(mids.length){var stub=16,pts=[{x:A.x,y:A.y},{x:A.x+A.nx*stub,y:A.y+A.ny*stub}];mids.forEach(function(m){pts.push({x:m.x,y:m.y});});pts.push({x:B.x+B.nx*stub,y:B.y+B.ny*stub},{x:B.x,y:B.y});return pts;}
+ if(ortho)return orthoPts(A,B,i);
+ var dist=Math.hypot(B.x-A.x,B.y-A.y),K=Math.max(34,Math.min(dist*0.45,110)),c1={x:A.x+A.nx*K,y:A.y+A.ny*K},c2={x:B.x+B.nx*K,y:B.y+B.ny*K},pts=[];
+ for(var s=0;s<=16;s++){var t=s/16,mt=1-t;pts.push({x:mt*mt*mt*A.x+3*mt*mt*t*c1.x+3*mt*t*t*c2.x+t*t*t*B.x,y:mt*mt*mt*A.y+3*mt*mt*t*c1.y+3*mt*t*t*c2.y+t*t*t*B.y});}
+ return pts;
+}
+function segInt(p1,p2,p3,p4){var rx=p2.x-p1.x,ry=p2.y-p1.y,sx=p4.x-p3.x,sy=p4.y-p3.y,den=rx*sy-ry*sx;if(Math.abs(den)<1e-6)return null;
+ var t=((p3.x-p1.x)*sy-(p3.y-p1.y)*sx)/den,u=((p3.x-p1.x)*ry-(p3.y-p1.y)*rx)/den;
+ if(t>0.05&&t<0.95&&u>0.05&&u<0.95)return{x:p1.x+rx*t,y:p1.y+ry*t};return null;}
+function projT(a,b,p){var dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L2)),px=a.x+dx*t,py=a.y+dy*t;return{t:t,d:Math.hypot(p.x-px,p.y-py)};}
+function polyPath(poly){var d='M '+poly[0].x.toFixed(1)+' '+poly[0].y.toFixed(1);for(var i=1;i<poly.length;i++)d+=' L '+poly[i].x.toFixed(1)+' '+poly[i].y.toFixed(1);return d;}
+function polyPathWithHops(poly,hops){
+ if(!hops||!hops.length)return polyPath(poly);
+ var r=7,perSeg={};
+ hops.forEach(function(h){var best=-1,bt=0,bd=1e9;for(var i=0;i<poly.length-1;i++){var pr=projT(poly[i],poly[i+1],h);if(pr.d<bd){bd=pr.d;best=i;bt=pr.t;}}if(best>=0)(perSeg[best]=perSeg[best]||[]).push({t:bt,x:h.x,y:h.y});});
+ var d='M '+poly[0].x.toFixed(1)+' '+poly[0].y.toFixed(1);
+ for(var i=0;i<poly.length-1;i++){var a=poly[i],b=poly[i+1],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  var hs=(perSeg[i]||[]).sort(function(p,q){return p.t-q.t;});
+  hs.forEach(function(h){var p1x=h.x-ux*r,p1y=h.y-uy*r,p2x=h.x+ux*r,p2y=h.y+uy*r;d+=' L '+p1x.toFixed(1)+' '+p1y.toFixed(1)+' A '+r+' '+r+' 0 0 1 '+p2x.toFixed(1)+' '+p2y.toFixed(1);});
+  d+=' L '+b.x.toFixed(1)+' '+b.y.toFixed(1);}
+ return d;
+}
+function makeDefs(){var d='<defs>';for(var k in NETS)d+='<marker id="m'+k+'" markerWidth="8" markerHeight="8" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="'+NETS[k].c+'"/></marker>';return d+'</defs>';}
+function computeAnchors(vis){
+ var inc={};DEF.forEach(function(n){inc[n.id]={left:[],right:[],top:[],bottom:[]};});
+ vis.forEach(function(o){
+  var A=off[o.w.a],B=off[o.w.b],ta=(o.w.mids&&o.w.mids.length)?o.w.mids[0]:center(B),tb=(o.w.mids&&o.w.mids.length)?o.w.mids[o.w.mids.length-1]:center(A);
+  var ea=pickEdge(A,ta),eb=pickEdge(B,tb);
+  inc[o.w.a][ea].push({i:o.i,end:'a',toward:(ea==='left'||ea==='right')?ta.y:ta.x});
+  inc[o.w.b][eb].push({i:o.i,end:'b',toward:(eb==='left'||eb==='right')?tb.y:tb.x});
+ });
+ ANCH={};
+ for(var id in inc)['left','right','top','bottom'].forEach(function(e){
+  var list=inc[id][e];list.sort(function(p,q){return p.toward-q.toward;});var n=list.length;
+  list.forEach(function(it,idx){var f=0.16+0.68*((idx+1)/(n+1)),pt=edgePoint(off[id],e,f);ANCH[it.i+it.end]={x:pt.x,y:pt.y,nx:pt.nx,ny:pt.ny};});
+ });
+}
+function render(){
+ var showLabels=document.getElementById('labels').checked;
+ var vis=WIRES.map(function(w,i){return{w:w,i:i};}).filter(function(o){return soloNet==null||o.w.net===soloNet;});
+ computeAnchors(vis);
+ var hopsOn=document.getElementById('hops').checked;
+ var poly={},hopMap={};
+ vis.forEach(function(o){poly[o.i]=buildPoly(o.i);hopMap[o.i]=[];});
+ if(hopsOn){for(var a=0;a<vis.length;a++)for(var b=a+1;b<vis.length;b++){var ia=vis[a].i,ib=vis[b].i,pa=poly[ia],pb=poly[ib];for(var s1=0;s1<pa.length-1;s1++)for(var s2=0;s2<pb.length-1;s2++){var P=segInt(pa[s1],pa[s1+1],pb[s2],pb[s2+1]);if(P)hopMap[ib].push(P);}}}
+ var defs=makeDefs(),hits='',paths='',lbls='',grips='';
+ vis.forEach(function(o){
+  var col=NETS[o.w.net].c,sel=(o.i===selectedWire),d=hopsOn?polyPathWithHops(poly[o.i],hopMap[o.i]):pathFor(o.i);
+  hits+='<path class="hit" data-w="'+o.i+'" d="'+d+'" stroke="rgba(0,0,0,0.001)" stroke-width="20" fill="none"/>';
+  paths+='<path id="wire'+o.i+'" class="wire" d="'+d+'" fill="none" stroke="'+col+'" stroke-width="'+(sel?5.5:3.4)+'" stroke-linecap="round" stroke-linejoin="round" opacity="'+(sel?1:0.9)+'" marker-end="url(#m'+o.w.net+')"><title>'+NETS[o.w.net].n+': '+o.w.l+'</title></path>';
+  if(showLabels){var A=ANCH[o.i+'a'],B=ANCH[o.i+'b'];if(A&&B){var lx=(A.x+B.x)/2,ly=(A.y+B.y)/2;if(o.w.mids&&o.w.mids.length){lx=o.w.mids[(o.w.mids.length-1)>>1].x;ly=o.w.mids[(o.w.mids.length-1)>>1].y;}lbls+='<text class="wlabel" x="'+lx.toFixed(0)+'" y="'+(ly-6).toFixed(0)+'" fill="'+col+'" text-anchor="middle">'+NETS[o.w.net].n+'</text>';}}
+  if(soloNet!=null||sel){var A=ANCH[o.i+'a'],B=ANCH[o.i+'b'];if(A&&B){
+    var chain=[{x:A.x,y:A.y}].concat((o.w.mids||[]).map(function(m){return{x:m.x,y:m.y};})).concat([{x:B.x,y:B.y}]);
+    (o.w.mids||[]).forEach(function(m,j){grips+='<circle class="grip" data-w="'+o.i+'" data-j="'+j+'" cx="'+m.x.toFixed(1)+'" cy="'+m.y.toFixed(1)+'" r="7"/>';});
+    for(var sgi=0;sgi<chain.length-1;sgi++){var mx=(chain[sgi].x+chain[sgi+1].x)/2,my=(chain[sgi].y+chain[sgi+1].y)/2;grips+='<circle class="gripadd" data-w="'+o.i+'" data-seg="'+sgi+'" cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="6"/>';}
+  }}
+ });
+ svg.innerHTML=defs+hits+paths+lbls+grips;
+ svg.querySelectorAll('.hit').forEach(function(el){wireDrag(el,+el.getAttribute('data-w'));});
+ svg.querySelectorAll('.grip').forEach(function(el){gripDrag(el,+el.getAttribute('data-w'),+el.getAttribute('data-j'),false);});
+ svg.querySelectorAll('.gripadd').forEach(function(el){gripDrag(el,+el.getAttribute('data-w'),+el.getAttribute('data-seg'),true);});
+}
+function svgPos(e){var r=svg.getBoundingClientRect();var x=e.clientX-r.left,y=e.clientY-r.top;
+ if(document.getElementById('snap').checked){x=Math.round(x/14)*14;y=Math.round(y/14)*14;}
+ return{x:Math.max(0,Math.min(x,960)),y:Math.max(0,Math.min(y,660))};}
+function svgRaw(e){var r=svg.getBoundingClientRect();return{x:Math.max(0,Math.min(e.clientX-r.left,960)),y:Math.max(0,Math.min(e.clientY-r.top,660))};}
+function snapPt(p){var x=p.x,y=p.y;if(document.getElementById('snap').checked){x=Math.round(x/14)*14;y=Math.round(y/14)*14;}return{x:Math.max(0,Math.min(x,960)),y:Math.max(0,Math.min(y,660))};}
+function wireDrag(el,i){
+ var active=false,snap0=[],start;
+ el.addEventListener('pointerdown',function(e){
+  e.preventDefault();e.stopPropagation();
+  selectedWire=i;active=true;el.setPointerCapture(e.pointerId);
+  snap0=(WIRES[i].mids||[]).map(function(m){return{x:m.x,y:m.y};});start=svgRaw(e);
+  var p=document.getElementById('wire'+i);if(p){p.setAttribute('stroke-width','5.5');p.setAttribute('opacity','1');}
+ });
+ el.addEventListener('pointermove',function(e){
+  if(!active)return;var cur=svgRaw(e),dx=cur.x-start.x,dy=cur.y-start.y;
+  if(snap0.length===0){WIRES[i].mids=[snapPt(cur)];}
+  else{WIRES[i].mids=snap0.map(function(m){return snapPt({x:m.x+dx,y:m.y+dy});});}
+  var d=pathFor(i),p=document.getElementById('wire'+i);if(p)p.setAttribute('d',d);el.setAttribute('d',d);
+ });
+ function end(){if(active){active=false;render();}}
+ el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+}
+function gripDrag(el,w,idx,isAdd){
+ var j=idx,active=false,moved=false;
+ el.addEventListener('pointerdown',function(e){
+  e.preventDefault();e.stopPropagation();active=true;moved=false;el.setPointerCapture(e.pointerId);
+  if(isAdd){var p=svgPos(e);WIRES[w].mids.splice(idx,0,{x:p.x,y:p.y});j=idx;el.setAttribute('class','grip');}
+ });
+ el.addEventListener('pointermove',function(e){
+  if(!active)return;moved=true;var p=svgPos(e);WIRES[w].mids[j]={x:p.x,y:p.y};
+  el.setAttribute('cx',p.x);el.setAttribute('cy',p.y);
+  var path=document.getElementById('wire'+w);if(path)path.setAttribute('d',pathFor(w));
+ });
+ function end(){if(active){active=false;render();}}
+ el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+ el.addEventListener('dblclick',function(e){e.stopPropagation();if(!isAdd){WIRES[w].mids.splice(j,1);render();}});
+}
+function loadPos(){
+ var saved=null;try{saved=JSON.parse(localStorage.getItem(KEY));}catch(e){}
+ var pos=saved&&saved.pos, mids=saved&&saved.mids;
+ if(mids)WIRES.forEach(function(w,i){if(mids[i])w.mids=mids[i];});
+ DEF.forEach(function(n){
+  var sv=pos&&pos[n.id];var el=document.createElement('div');el.className='tile'+(n.hat?' hat':'');el.id='t_'+n.id;
+  el.style.width=n.w+'px';el.style.height=n.h+'px';el.style.left=((sv?sv.x:n.x))+'px';el.style.top=((sv?sv.y:n.y))+'px';
+  el.innerHTML='<div class="tt">'+n.t+'</div>'+n.p.map(function(x){return '<div class="pp">'+x+'</div>';}).join('');
+  stage.appendChild(el);off[n.id]={x:parseFloat(el.style.left),y:parseFloat(el.style.top),w:n.w,h:n.h};tiles[n.id]=el;tileDrag(el,n.id);
+ });
+}
+function tileDrag(el,id){var sX,sY,ox,oy,on=false;
+ el.addEventListener('pointerdown',function(e){on=true;el.setPointerCapture(e.pointerId);sX=e.clientX;sY=e.clientY;ox=off[id].x;oy=off[id].y;el.style.zIndex=5;e.preventDefault();});
+ el.addEventListener('pointermove',function(e){if(!on)return;var nx=ox+(e.clientX-sX),ny=oy+(e.clientY-sY);
+  if(document.getElementById('snap').checked){nx=Math.round(nx/14)*14;ny=Math.round(ny/14)*14;}
+  nx=Math.max(0,Math.min(nx,stage.clientWidth-off[id].w));ny=Math.max(0,Math.min(ny,stage.clientHeight-off[id].h));
+  off[id].x=nx;off[id].y=ny;el.style.left=nx+'px';el.style.top=ny+'px';render();});
+ function end(){on=false;el.style.zIndex=2;}el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+}
+function buildLegend(){var L=document.getElementById('legend');for(var k in NETS){(function(k){
+ var s=document.createElement('span');s.className='lg';s.setAttribute('data-net',k);s.innerHTML='<span class="dot" style="background:'+NETS[k].c+'"></span>'+NETS[k].n;
+ s.onclick=function(){soloNet=(soloNet===k)?null:k;
+  document.querySelectorAll('.lg').forEach(function(x){var isk=x.getAttribute('data-net')===soloNet;x.classList.toggle('off',soloNet!=null&&!isk);x.classList.toggle('solo',soloNet!=null&&isk);});
+  document.getElementById('hint').textContent=soloNet?('Editing '+NETS[k].n+': drag dotted handles to route; drag solid handles to move a bend; double-tap a bend to remove it.'):'Tap a net chip to isolate + edit one net.';
+  render();};L.appendChild(s);})(k);}}
+document.getElementById('save').onclick=function(){var pos={};for(var id in off)pos[id]={x:off[id].x,y:off[id].y};var mids={};WIRES.forEach(function(w,i){if(w.mids&&w.mids.length)mids[i]=w.mids;});
+ try{localStorage.setItem(KEY,JSON.stringify({pos:pos,mids:mids}));document.getElementById('hint').textContent='Layout + wire routes saved on this device. ✓';}catch(e){document.getElementById('hint').textContent='Could not save (storage blocked).';}};
+document.getElementById('reset').onclick=function(){try{localStorage.removeItem(KEY);}catch(e){}
+ WIRES.forEach(function(w){w.mids=[];});DEF.forEach(function(n){off[n.id].x=n.x;off[n.id].y=n.y;tiles[n.id].style.left=n.x+'px';tiles[n.id].style.top=n.y+'px';});
+ soloNet=null;document.querySelectorAll('.lg').forEach(function(x){x.classList.remove('off','solo');});render();document.getElementById('hint').textContent='Reset to default.';};
+document.getElementById('labels').onchange=render;document.getElementById('ortho').onchange=render;document.getElementById('hops').onchange=render;
+stage.addEventListener('pointerdown',function(e){if(e.target===stage||e.target===svg){if(selectedWire!=null){selectedWire=null;render();}}});
+(function(){var tb=document.getElementById('theme');
+ function setT(light){document.documentElement.classList.toggle('light',light);tb.textContent=light?'🌙 Dark':'☀ Light';}
+ try{setT(localStorage.getItem('planner_theme')==='light');}catch(e){}
+ tb.onclick=function(){var light=!document.documentElement.classList.contains('light');setT(light);try{localStorage.setItem('planner_theme',light?'light':'dark');}catch(e){}};
+})();
+loadPos();buildLegend();render();window.addEventListener('resize',render);
+</script>

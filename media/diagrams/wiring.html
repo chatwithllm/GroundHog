@@ -1,0 +1,147 @@
+<style>
+:root{--bg:#0f141b;--panel:#161d27;--line:#26313f;--ink:#e7edf3;--mut:#8ea1b4;--grid:#1b2531;--acc:#4cc4e0}
+:root[data-theme="light"]{--bg:#eef2f6;--panel:#fff;--line:#d3dae2;--ink:#1c2530;--mut:#5a6b7b;--grid:#dce3ea;--acc:#0e7fa6}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#eef2f6;--panel:#fff;--line:#d3dae2;--ink:#1c2530;--mut:#5a6b7b;--grid:#dce3ea;--acc:#0e7fa6}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:16px}
+h1{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:19px;letter-spacing:.04em;margin:2px 0}
+.sub{color:var(--mut);font-size:13px;margin:0 0 12px}
+.bar{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:color-mix(in srgb,var(--bg) 80%,transparent);backdrop-filter:blur(6px);padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+button{font-family:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 15px;border-radius:9px;cursor:pointer}
+button.pri{background:var(--acc);color:#04222c;border-color:var(--acc);font-weight:700}
+button:disabled{opacity:.4}button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.count{font-family:ui-monospace,monospace;color:var(--acc);min-width:92px;text-align:center}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px}
+svg{display:block;width:100%;height:auto}
+.card{fill:var(--panel);stroke:var(--line);stroke-width:1.6}
+.card.hat{stroke:#2f9e44;stroke-dasharray:6 3}
+.ct{fill:var(--ink);font:700 13px ui-sans-serif,system-ui}
+.cp{fill:var(--mut);font:12px ui-monospace,monospace}
+.wire{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;opacity:0;transition:stroke-dashoffset .55s ease,opacity .2s}
+.wire.on{opacity:1;stroke-dashoffset:0}
+.wt{font:700 10px ui-monospace,monospace;opacity:0;transition:opacity .3s}.wt.on{opacity:1}
+ul.steps{list-style:none;margin:0;padding:0}
+.srow{display:flex;gap:10px;padding:10px;border-radius:10px;opacity:.35;transition:opacity .3s,background .3s}
+.srow.on{opacity:1}.srow.cur{background:color-mix(in srgb,var(--acc) 14%,transparent);outline:1px solid color-mix(in srgb,var(--acc) 50%,transparent)}
+.chip{width:14px;height:14px;border-radius:4px;flex:0 0 auto;margin-top:3px}
+.sh{font-size:14px}.sd{color:var(--mut);font-size:12.5px;margin-top:2px;line-height:1.45}
+.tag{font:700 10px ui-monospace,monospace;border:1px solid;border-radius:5px;padding:1px 5px;margin-left:6px}
+@media(prefers-reduced-motion:reduce){.wire,.wt,.srow{transition:none}}
+</style>
+<div class="wrap">
+<h1>RTK Rover — Complete Wiring</h1>
+<p class="sub">Every pin connection, one net at a time. This build uses the <b>LC29H as a Pi HAT</b>: the GPS lives on the Raspberry Pi, and the Pi forwards the fix to the F405 over USB (MAVLink). Power off while wiring; check polarity on the 24V.</p>
+<div class="bar"><button id="pv">← Prev</button><span class="count" id="ct">Step 0 / 8</span><button id="nx" class="pri">Next →</button><button id="al">Reveal all</button><button id="rs">Restart</button></div>
+<div class="grid">
+<div class="panel"><svg viewBox="0 0 840 640" role="img" aria-label="Complete wiring for the RTK rover with the LC29H as a Raspberry Pi HAT, revealed net by net.">
+<rect width="840" height="640" fill="url(#g)"/>
+<path class="wire" data-step="1" d="M 200 113 L 250 113 L 250 150 L 320 200" stroke="#e6194b" pathLength="1" marker-end="url(#av24)"/>
+<text class="wt" data-step="1" x="250" y="144" fill="#e6194b" text-anchor="middle">24V</text>
+<path class="wire" data-step="1" d="M 120 156 L 120 200" stroke="#e6194b" pathLength="1" marker-end="url(#av24)"/>
+<text class="wt" data-step="1" x="120" y="194" fill="#e6194b" text-anchor="middle">24V</text>
+<path class="wire" data-step="2" d="M 200 240 L 240 240 L 240 320 L 600 320 L 630 200" stroke="#f58231" pathLength="1" marker-end="url(#av5)"/>
+<text class="wt" data-step="2" x="240" y="314" fill="#f58231" text-anchor="middle">5V</text>
+<path class="wire" data-step="2" d="M 200 240 L 222 240 L 222 632 L 792 632 L 792 572" stroke="#f58231" pathLength="1" marker-end="url(#av5)"/>
+<text class="wt" data-step="2" x="215" y="460" fill="#f58231" text-anchor="middle">5V</text>
+<path class="wire" data-step="3" d="M 120 156 L 120 600 L 720 600 L 720 572" stroke="#7a8797" pathLength="1" marker-end="url(#agnd)"/>
+<text class="wt" data-step="3" x="720" y="594" fill="#7a8797" text-anchor="middle">GND</text>
+<path class="wire" data-step="3" d="M 425 310 L 425 330 L 120 330" stroke="#7a8797" pathLength="1" marker-end="url(#agnd)"/>
+<text class="wt" data-step="3" x="425" y="324" fill="#7a8797" text-anchor="middle">GND</text>
+<path class="wire" data-step="4" d="M 630 200 L 600 215 L 560 200 L 530 200" stroke="#4363d8" pathLength="1" marker-end="url(#asig)"/>
+<text class="wt" data-step="4" x="560" y="194" fill="#4363d8" text-anchor="middle">PWM+DIR</text>
+<path class="wire" data-step="5" d="M 425 310 L 425 400 L 375 470 L 375 500" stroke="#911eb4" pathLength="1" marker-end="url(#amot)"/>
+<text class="wt" data-step="5" x="375" y="464" fill="#911eb4" text-anchor="middle">5-WIRE</text>
+<path class="wire" data-step="5" d="M 425 310 L 470 400 L 545 470 L 545 500" stroke="#911eb4" pathLength="1" marker-end="url(#amot)"/>
+<text class="wt" data-step="5" x="545" y="464" fill="#911eb4" text-anchor="middle">5-WIRE</text>
+<path class="wire" data-step="6" d="M 720 426 L 720 452" stroke="#2f9e44" pathLength="1" marker-end="url(#agps)"/>
+<text class="wt" data-step="6" x="720" y="446" fill="#2f9e44" text-anchor="middle">GPS/RTK</text>
+<path class="wire" data-step="7" d="M 720 452 L 720 300 L 720 290" stroke="#0ba5c4" pathLength="1" marker-end="url(#ausb)"/>
+<text class="wt" data-step="7" x="720" y="294" fill="#0ba5c4" text-anchor="middle">MAVLink</text>
+<path class="wire" data-step="8" d="M 375 580 L 375 620 L 826 620 L 826 235 L 810 235" stroke="#0f8a8a" pathLength="1" marker-end="url(#afg)"/>
+<text class="wt" data-step="8" x="460" y="614" fill="#0f8a8a" text-anchor="middle">FG</text>
+<path class="wire" data-step="8" d="M 545 580 L 545 606 L 814 606 L 814 255 L 810 255" stroke="#0f8a8a" pathLength="1" marker-end="url(#afg)"/>
+<text class="wt" data-step="8" x="460" y="600" fill="#0f8a8a" text-anchor="middle">FG</text>
+<g class="cardg"><rect class="card" x="40" y="70" width="160" height="86" rx="10"/>
+<text class="ct" x="50" y="92">6S 24V PACK</text>
+<text class="cp" x="52" y="112">PWR+  (24V)</text>
+<text class="cp" x="52" y="130">GND</text>
+</g>
+<g class="cardg"><rect class="card" x="40" y="200" width="160" height="80" rx="10"/>
+<text class="ct" x="50" y="222">UBEC  24V→5V</text>
+<text class="cp" x="52" y="242">IN+ / IN−</text>
+<text class="cp" x="52" y="260">5V / GND</text>
+</g>
+<g class="cardg"><rect class="card" x="320" y="90" width="210" height="220" rx="10"/>
+<text class="ct" x="330" y="112">BLDC DRIVE x2</text>
+<text class="cp" x="332" y="132">integrated in motor</text>
+<text class="cp" x="332" y="150">24V+ , GND</text>
+<text class="cp" x="332" y="168">Blue PWM , Yellow DIR</text>
+<text class="cp" x="332" y="186">Green FG (tacho out)</text>
+</g>
+<g class="cardg"><rect class="card" x="300" y="500" width="150" height="80" rx="10"/>
+<text class="ct" x="310" y="522">LEFT MOTOR (BLDC)</text>
+<text class="cp" x="312" y="542">Red+24V  Blk GND</text>
+<text class="cp" x="312" y="560">PWM  DIR  FG</text>
+</g>
+<g class="cardg"><rect class="card" x="470" y="500" width="150" height="80" rx="10"/>
+<text class="ct" x="480" y="522">RIGHT MOTOR (BLDC)</text>
+<text class="cp" x="482" y="542">Red+24V  Blk GND</text>
+<text class="cp" x="482" y="560">PWM  DIR  FG</text>
+</g>
+<g class="cardg"><rect class="card" x="630" y="110" width="180" height="180" rx="10"/>
+<text class="ct" x="640" y="132">RADIOLINK F405</text>
+<text class="cp" x="642" y="152">5V , GND</text>
+<text class="cp" x="642" y="170">PWM+DIR (M1/M2)</text>
+<text class="cp" x="642" y="188">FG in , USB</text>
+</g>
+<g class="cardg"><rect class="card hat" x="630" y="360" width="180" height="66" rx="10"/>
+<text class="ct" x="640" y="382">LC29H RTK  (HAT)</text>
+<text class="cp" x="642" y="402">on Pi 40-pin header</text>
+<text class="cp" x="642" y="420">antenna in</text>
+</g>
+<g class="cardg"><rect class="card" x="630" y="452" width="180" height="120" rx="10"/>
+<text class="ct" x="640" y="474">RASPBERRY Pi 4</text>
+<text class="cp" x="642" y="494">5V , GND</text>
+<text class="cp" x="642" y="512">UART -&gt; LC29H</text>
+<text class="cp" x="642" y="530">USB -&gt; F405</text>
+<text class="cp" x="642" y="548">NTRIP client</text>
+<text class="cp" x="642" y="566">WiFi / LTE</text>
+</g>
+<defs><pattern id="g" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="transparent"/><path d="M28 0H0V28" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern>
+<marker id="av24" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#e6194b"/></marker>
+<marker id="av5" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#f58231"/></marker>
+<marker id="agnd" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7a8797"/></marker>
+<marker id="asig" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#4363d8"/></marker>
+<marker id="amot" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#911eb4"/></marker>
+<marker id="agps" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2f9e44"/></marker>
+<marker id="ausb" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#0ba5c4"/></marker>
+<marker id="afg" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#0f8a8a"/></marker>
+</defs></svg></div>
+<div class="panel"><ul class="steps"><li class="srow" data-step="1"><span class="chip" style="background:#e6194b"></span><div><div class="sh"><b>1. 24V power</b> <span class="tag" style="color:#e6194b;border-color:#e6194b">24V</span></div><div class="sd">Battery PWR+ → each motor Red (+24V)  •  Battery PWR+ → UBEC IN+  •  Battery PWR− → motor Black (GND) &amp; UBEC IN−. Motors are BLDC5520 24V with an integrated driver — no external motor driver. ⚠ Check +/− twice before power-up.</div></div></li>
+<li class="srow" data-step="2"><span class="chip" style="background:#f58231"></span><div><div class="sh"><b>2. 5V logic</b> <span class="tag" style="color:#f58231;border-color:#f58231">5V</span></div><div class="sd">UBEC 5V → F405 5V and Pi 5V  •  UBEC GND → each GND. The LC29H HAT is powered by the Pi through the header.</div></div></li>
+<li class="srow" data-step="3"><span class="chip" style="background:#7a8797"></span><div><div class="sh"><b>3. Common ground</b> <span class="tag" style="color:#7a8797;border-color:#7a8797">GND</span></div><div class="sd">Tie ALL grounds: Battery− = motor Black = F405 GND = Pi GND = UBEC−.</div></div></li>
+<li class="srow" data-step="4"><span class="chip" style="background:#4363d8"></span><div><div class="sh"><b>4. Motor PWM + DIR</b> <span class="tag" style="color:#4363d8;border-color:#4363d8">PWM+DIR</span></div><div class="sd">F405 PWM out → each motor Blue (speed)  •  F405 relay/GPIO → each motor Yellow (DIR/direction)  •  common GND.  (SERVO1=ThrottleLeft, SERVO3=ThrottleRight, MOT_PWM_TYPE=3 Brushed-With-Relay.)</div></div></li>
+<li class="srow" data-step="5"><span class="chip" style="background:#911eb4"></span><div><div class="sh"><b>5. Motor 5-wire connector</b> <span class="tag" style="color:#911eb4;border-color:#911eb4">5-WIRE</span></div><div class="sd">Each motor gets 5 wires: Red +24V, Black GND, Blue PWM (speed), Yellow DIR (direction), Green FG (tacho). The integrated driver runs off the 24V rail — never off 5V. (Flip the DIR line to reverse that wheel.)</div></div></li>
+<li class="srow" data-step="6"><span class="chip" style="background:#2f9e44"></span><div><div class="sh"><b>6. GPS / RTK  (on the Pi)</b> <span class="tag" style="color:#2f9e44;border-color:#2f9e44">GPS/RTK</span></div><div class="sd">LC29H RTK HAT seats on the Pi’s 40-pin header (Pi UART, e.g. /dev/ttyAMA0 or /dev/serial0). Attach the antenna. The Pi runs the NTRIP client and injects RTCM straight into the LC29H → centimeter fix. No GPS wire to the F405.</div></div></li>
+<li class="srow" data-step="7"><span class="chip" style="background:#0ba5c4"></span><div><div class="sh"><b>7. Pi ↔ F405 bridge</b> <span class="tag" style="color:#0ba5c4;border-color:#0ba5c4">MAVLink</span></div><div class="sd">Pi USB ↔ F405 USB (MAVLink). The Pi forwards the GPS fix to the F405 as GPS_INPUT — set ArduRover GPS_TYPE = MAV. Same link carries missions/telemetry.</div></div></li>
+<li class="srow" data-step="8"><span class="chip" style="background:#0f8a8a"></span><div><div class="sh"><b>8. Motor FG feedback</b> <span class="tag" style="color:#0f8a8a;border-color:#0f8a8a">FG</span></div><div class="sd">Each motor's Green FG (tacho out) → F405 — one pulse train per rev gives wheel speed. FG replaces the old wheel encoders. (Confirm the FG signal is 3.3V-safe.)</div></div></li></ul></div>
+</div>
+</div>
+<script>
+var max=8,cur=0;
+var wires=[].slice.call(document.querySelectorAll('.wire,.wt'));
+var rows=[].slice.call(document.querySelectorAll('.srow'));
+var pv=document.getElementById('pv'),nx=document.getElementById('nx'),al=document.getElementById('al'),rs=document.getElementById('rs'),ct=document.getElementById('ct');
+function apply(sc){
+ wires.forEach(function(w){w.classList.toggle('on',+w.getAttribute('data-step')<=cur);});
+ rows.forEach(function(r){var s=+r.getAttribute('data-step');r.classList.toggle('on',s<=cur);r.classList.toggle('cur',s===cur);});
+ ct.textContent='Step '+cur+' / '+max;pv.disabled=cur<=0;nx.disabled=cur>=max;
+ if(sc&&cur>0){var t=document.querySelector('.srow[data-step="'+cur+'"]');if(t)t.scrollIntoView({block:'nearest',behavior:'smooth'});}
+}
+nx.onclick=function(){if(cur<max){cur++;apply(true);}};pv.onclick=function(){if(cur>0){cur--;apply(true);}};
+al.onclick=function(){cur=max;apply(false);};rs.onclick=function(){cur=0;apply(false);};
+document.addEventListener('keydown',function(e){if(e.key==='ArrowRight')nx.click();if(e.key==='ArrowLeft')pv.click();});
+apply(false);
+</script>

@@ -1,0 +1,113 @@
+<style>
+:root{--bp:#0e2a4a;--bp2:#0b2038;--cy:#5fd0e0;--cyd:#2f7f95;--ink:#eaf6fb;--am:#e0a94a;--gn:#57d08a;--mut:#9fc3d6}
+*{box-sizing:border-box}
+body{background:#081726;margin:0}
+.wrap{max-width:900px;margin:0 auto;padding:18px 16px 40px;font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+h1{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;font-size:20px;color:var(--cy);margin:2px 0 2px;text-align:center}
+.sub{color:var(--mut);text-align:center;font-size:13px;margin:0 0 14px}
+.bar{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;background:#081726cc;backdrop-filter:blur(6px);padding:10px;border-radius:12px;margin-bottom:12px;border:1px solid #17457a}
+button{font-family:inherit;font-size:14px;border:1px solid var(--cyd);background:#0e2a4a;color:var(--ink);padding:8px 16px;border-radius:9px;cursor:pointer}
+button:hover{border-color:var(--cy)}
+button:disabled{opacity:.4;cursor:default}
+button.pri{background:var(--cy);color:#062031;border-color:var(--cy);font-weight:700}
+button:focus-visible{outline:3px solid var(--am);outline-offset:2px}
+.count{font-family:ui-monospace,monospace;color:var(--cy);font-size:14px;min-width:92px;text-align:center}
+.board{background:var(--bp);border:1px solid #17457a;border-radius:14px;overflow:hidden}
+svg{display:block;width:100%;height:auto}
+.node{opacity:0;transform:translateY(10px);transition:opacity .45s ease,transform .45s ease}
+.node.vis{opacity:1;transform:none}
+.node rect,.node polygon{fill:#12365f;stroke:var(--cy);stroke-width:2}
+.node.start rect,.node.end rect{fill:#123f2e;stroke:var(--gn)}
+.node.dec polygon{fill:#3a2f14;stroke:var(--am)}
+.node.fix rect{fill:#3a2417;stroke:var(--am);stroke-dasharray:5 4}
+.t1{fill:var(--ink);font-size:16px;font-weight:700}
+.t1.big{font-size:18px}
+.node.start .t1,.node.end .t1{fill:#bff0d2}
+.node.dec .t1{fill:#ffe4ad;font-family:ui-monospace,monospace;font-size:14px;letter-spacing:.05em}
+.node.dec .t2{fill:#ffd48a}
+.node.fix .t1{fill:#ffcf9a;font-size:14px;font-weight:700}
+.t2{fill:var(--mut);font-size:12.5px}
+.yes{fill:var(--gn);font-size:12px;font-family:ui-monospace,monospace}
+.edge{stroke:var(--cy);stroke-width:2.4;fill:none;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .5s ease}
+.edge.no{stroke:var(--am)}
+.edge.dash{stroke-dasharray:.03 .02}
+.edge.vis{stroke-dashoffset:0}
+.lbl{opacity:0;transition:opacity .4s}
+.lbl.no{fill:var(--am);font-size:12px;font-family:ui-monospace,monospace}
+.lbl.vis{opacity:1}
+@media(prefers-reduced-motion:reduce){.node,.edge,.lbl{transition:none}}
+</style>
+<div class="wrap">
+<h1>RTK Rover &mdash; Build &amp; Commissioning</h1>
+<p class="sub">Bring-up flow from parts on the bench to an autonomous rover. Step through it &mdash; two checkpoints loop back until they pass.</p>
+<div class="bar">
+<button id="prev">&larr; Prev</button>
+<span class="count" id="count">Step 0 / 14</span>
+<button id="next" class="pri">Next &rarr;</button>
+<button id="all">Reveal all</button>
+<button id="restart">Restart</button>
+</div>
+<div class="board">
+<svg id="fc" viewBox="0 0 860 1944" role="img" aria-label="Step-by-step build and commissioning flowchart for the RTK rover.">
+<rect x="0" y="0" width="860" height="1944" fill="url(#grid)"/>
+<path class="edge on-2" data-step="2" d="M 270 98 L 270 146" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-3" data-step="3" d="M 270 228 L 270 276" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-4" data-step="4" d="M 270 358 L 270 406" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-5" data-step="5" d="M 270 512 L 270 560" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge no" data-step="6" d="M 420 749 L 520 749" pathLength="1" marker-end="url(#arn)"/>
+<text class="lbl no" data-step="6" x="470" y="741" text-anchor="middle">No</text>
+<path class="edge no dash" data-step="6" d="M 670 711 L 670 676 L 270 676" pathLength="1" marker-end="url(#arn)"/>
+<path class="edge on-6" data-step="6" d="M 270 642 L 270 690" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-7" data-step="7" d="M 270 808 L 270 864" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-8" data-step="8" d="M 270 946 L 270 994" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-9" data-step="9" d="M 270 1076 L 270 1124" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge no" data-step="10" d="M 420 1313 L 520 1313" pathLength="1" marker-end="url(#arn)"/>
+<text class="lbl no" data-step="10" x="470" y="1305" text-anchor="middle">No</text>
+<path class="edge no dash" data-step="10" d="M 670 1275 L 670 1240 L 270 1240" pathLength="1" marker-end="url(#arn)"/>
+<path class="edge on-10" data-step="10" d="M 270 1206 L 270 1254" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-11" data-step="11" d="M 270 1372 L 270 1428" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-12" data-step="12" d="M 270 1510 L 270 1558" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-13" data-step="13" d="M 270 1640 L 270 1688" pathLength="1" marker-end="url(#ar)"/>
+<path class="edge on-14" data-step="14" d="M 270 1770 L 270 1818" pathLength="1" marker-end="url(#ar)"/>
+<g class="node start" data-step="1"><rect x="70" y="40" width="400" height="58" rx="29"/><text class="t1 big" x="270.0" y="76.0" text-anchor="middle">Parts on the bench</text></g>
+<g class="node proc" data-step="2"><rect x="70" y="146" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="176" text-anchor="middle">Flash ArduRover</text><text class="t2" x="270.0" y="198" text-anchor="middle">RadiolinkF405 target - Mission Planner</text></g>
+<g class="node proc" data-step="3"><rect x="70" y="276" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="306" text-anchor="middle">Set Brushed-With-Relay</text><text class="t2" x="270.0" y="328" text-anchor="middle">MOT_PWM_TYPE=3 - assign DIR relay pins</text></g>
+<g class="node proc" data-step="4"><rect x="70" y="406" width="400" height="106" rx="14"/><text class="t1" x="270.0" y="436" text-anchor="middle">Wire it up</text><text class="t2" x="270.0" y="458" text-anchor="middle">24V -&gt; motor Red/Black (integrated driver)</text><text class="t2" x="270.0" y="480" text-anchor="middle">F405 PWM+DIR -&gt; motor, FG back, common GND</text></g>
+<g class="node proc" data-step="5"><rect x="70" y="560" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="590" text-anchor="middle">Chassis wheels UP</text><text class="t2" x="270.0" y="612" text-anchor="middle">safety - the motors will spin</text></g>
+<g class="node dec" data-step="6"><polygon points="270.0,691.0 420.0,749.0 270.0,807.0 120.0,749.0"/><text class="t1" x="270.0" y="741.0" text-anchor="middle">MOTOR TEST</text><text class="t2" x="270.0" y="765.0" text-anchor="middle">each wheel spins fwd &amp; rev?</text><text class="yes" x="270.0" y="829.0" text-anchor="middle">Yes v</text></g>
+<g class="node fix" data-step="6"><rect x="520" y="717" width="300" height="64" rx="12"/><text class="t1" x="670.0" y="743.0" text-anchor="middle">Fix &amp; retry</text><text class="t2" x="670.0" y="765.0" text-anchor="middle">check wiring / MOT_PWM_TYPE / DIR relay</text></g>
+<g class="node proc" data-step="7"><rect x="70" y="864" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="894" text-anchor="middle">RC calibrate + skid-steer</text><text class="t2" x="270.0" y="916" text-anchor="middle">set ThrottleLeft / ThrottleRight mixing</text></g>
+<g class="node proc" data-step="8"><rect x="70" y="994" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="1024" text-anchor="middle">Connect LC29H GPS</text><text class="t2" x="270.0" y="1046" text-anchor="middle">-&gt; F405 UART - set GPS params</text></g>
+<g class="node proc" data-step="9"><rect x="70" y="1124" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="1154" text-anchor="middle">Stream NTRIP corrections</text><text class="t2" x="270.0" y="1176" text-anchor="middle">Pi NTRIP client -&gt; F405</text></g>
+<g class="node dec" data-step="10"><polygon points="270.0,1255.0 420.0,1313.0 270.0,1371.0 120.0,1313.0"/><text class="t1" x="270.0" y="1305.0" text-anchor="middle">RTK STATUS</text><text class="t2" x="270.0" y="1329.0" text-anchor="middle">= FIXED (cm) ?</text><text class="yes" x="270.0" y="1393.0" text-anchor="middle">Yes v</text></g>
+<g class="node fix" data-step="10"><rect x="520" y="1281" width="300" height="64" rx="12"/><text class="t1" x="670.0" y="1307.0" text-anchor="middle">Fix &amp; retry</text><text class="t2" x="670.0" y="1329.0" text-anchor="middle">base sky-view / caster / antenna</text></g>
+<g class="node proc" data-step="11"><rect x="70" y="1428" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="1458" text-anchor="middle">Home + geofence + failsafe</text><text class="t2" x="270.0" y="1480" text-anchor="middle">set the safety envelope</text></g>
+<g class="node proc" data-step="12"><rect x="70" y="1558" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="1588" text-anchor="middle">Load waypoint mission</text><text class="t2" x="270.0" y="1610" text-anchor="middle">in Mission Planner</text></g>
+<g class="node proc" data-step="13"><rect x="70" y="1688" width="400" height="82" rx="14"/><text class="t1" x="270.0" y="1718" text-anchor="middle">Supervised auto run</text><text class="t2" x="270.0" y="1740" text-anchor="middle">arm - e-stop ready</text></g>
+<g class="node end" data-step="14"><rect x="70" y="1818" width="400" height="58" rx="29"/><text class="t1 big" x="270.0" y="1854.0" text-anchor="middle">Autonomous RTK rover</text></g>
+<defs>
+<pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><rect width="34" height="34" fill="#0e2a4a"/><path d="M34 0H0V34" fill="none" stroke="#17457a" stroke-width="1"/></pattern>
+<marker id="ar" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5fd0e0"/></marker>
+<marker id="arn" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e0a94a"/></marker>
+</defs>
+</svg>
+</div>
+</div>
+<script>
+var max=14,cur=0;
+var nodes=[].slice.call(document.querySelectorAll('[data-step]'));
+var prevB=document.getElementById('prev'),nextB=document.getElementById('next'),allB=document.getElementById('all'),rB=document.getElementById('restart'),cnt=document.getElementById('count');
+function apply(scroll){
+  nodes.forEach(function(el){var s=+el.getAttribute('data-step');
+    var on=s<=cur; el.classList.toggle('vis',on);});
+  cnt.textContent='Step '+cur+' / '+max;
+  prevB.disabled=cur<=0; nextB.disabled=cur>=max;
+  if(scroll&&cur>0){var t=document.querySelector('.node[data-step="'+cur+'"]');if(t)t.scrollIntoView({block:'center',behavior:'smooth'});}
+}
+nextB.onclick=function(){if(cur<max){cur++;apply(true);}};
+prevB.onclick=function(){if(cur>0){cur--;apply(true);}};
+allB.onclick=function(){cur=max;apply(false);};
+rB.onclick=function(){cur=0;apply(false);window.scrollTo({top:0,behavior:'smooth'});};
+document.addEventListener('keydown',function(e){if(e.key==='ArrowRight')nextB.click();if(e.key==='ArrowLeft')prevB.click();});
+apply(false);
+</script>
