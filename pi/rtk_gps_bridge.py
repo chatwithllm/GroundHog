@@ -56,3 +56,38 @@ def build_gps_input_kwargs(fix):
         speed_accuracy=float(fix.get("s_acc", 0.0)),
         horiz_accuracy=float(fix.get("h_acc", 0.0)), vert_accuracy=float(fix.get("v_acc", 0.0)),
         satellites_visible=int(fix.get("sats", 0)))
+
+
+def main():
+    import time
+    import math
+    from pymavlink import mavutil
+    LOG = "/var/log/rtk/live-nmea.log"
+    m = mavutil.mavlink_connection("udpout:127.0.0.1:14551", source_system=1)
+    fix = {}
+    f = open(LOG, "r", errors="replace")
+    f.seek(0, 2)   # tail: start at end of the (growing) log
+    while True:
+        line = f.readline()
+        if not line:
+            time.sleep(0.05)
+            continue
+        r = parse_nmea_line(line)
+        if not r:
+            continue
+        if r["kind"] == "RMC":
+            cog = math.radians(r["cog_deg"])
+            fix["vn"] = r["sog_mps"] * math.cos(cog)
+            fix["ve"] = r["sog_mps"] * math.sin(cog)
+            fix["vd"] = 0.0
+        elif r["kind"] == "GST":
+            fix["h_acc"] = max(r["lat_acc"], r["lon_acc"])
+            fix["v_acc"] = r["alt_acc"]
+        elif r["kind"] == "GGA":
+            fix.update({k: r[k] for k in ("lat", "lon", "alt", "quality", "sats", "hdop")})
+            if fix.get("lat") is not None:
+                m.mav.gps_input_send(**build_gps_input_kwargs(fix))
+
+
+if __name__ == "__main__":
+    main()

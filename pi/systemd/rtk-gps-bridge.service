@@ -1,0 +1,14 @@
+[Unit]
+Description=RTK GPS bridge (NMEA log -> GPS_INPUT -> router)
+After=rtk-port-relay.service mavlink-router.service
+Wants=rtk-port-relay.service
+
+[Service]
+User=npalakurla
+Group=npalakurla
+ExecStart=/home/npalakurla/rsvenv/bin/python /usr/local/bin/rtk_gps_bridge.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
