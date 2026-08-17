@@ -1,0 +1,497 @@
+<title>Groundhog Component Bay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    /* light — cool slate paper, warm ochre accent (chosen, not defaulted) */
+    --ground:#e8ebee; --surface:#ffffff; --surface2:#f2f4f7; --sunk:#eceff3;
+    --ink:#191d23; --muted:#5b6672; --faint:#8b96a2; --line:#d3d9e0;
+    --accent:#b3641a; --accent-ink:#8a4c12; --accent-soft:rgba(179,100,26,.11);
+    --ok:#1f8a3b; --wip:#b9820a; --hazard:#cf1e42;
+    --shadow:0 1px 2px rgba(20,30,40,.06),0 8px 24px rgba(20,30,40,.06);
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#101216; --surface:#181b21; --surface2:#1f242c; --sunk:#0d0f13;
+    --ink:#e7eaee; --muted:#8b95a1; --faint:#69727e; --line:#2a313a;
+    --accent:#e6944b; --accent-ink:#f0a869; --accent-soft:rgba(230,148,75,.13);
+    --ok:#3fb559; --wip:#e0a92a; --hazard:#ff5a72;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }}
+  :root[data-theme="dark"]{
+    --ground:#101216; --surface:#181b21; --surface2:#1f242c; --sunk:#0d0f13;
+    --ink:#e7eaee; --muted:#8b95a1; --faint:#69727e; --line:#2a313a;
+    --accent:#e6944b; --accent-ink:#f0a869; --accent-soft:rgba(230,148,75,.13);
+    --ok:#3fb559; --wip:#e0a92a; --hazard:#ff5a72;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+    line-height:1.5;-webkit-font-smoothing:antialiased;padding:28px 20px 64px}
+  .wrap{max-width:1220px;margin:0 auto}
+
+  /* header */
+  header{margin-bottom:24px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent-ink);display:flex;align-items:center;gap:9px}
+  .kicker::before{content:"";width:22px;height:2px;background:var(--accent)}
+  h1{font-size:clamp(26px,4.5vw,40px);line-height:1.05;margin:.28em 0 .12em;letter-spacing:-.02em;
+    text-wrap:balance;font-weight:800}
+  .lede{color:var(--muted);max-width:66ch;font-size:15.5px;margin:0}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:18px;
+    padding-top:16px;border-top:1px solid var(--line)}
+  .legend{display:flex;flex-wrap:wrap;gap:7px}
+  .btn{font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--surface);
+    border:1px solid var(--line);border-radius:7px;padding:6px 11px;cursor:pointer}
+  .btn:hover{color:var(--ink);border-color:var(--accent)}
+  .spacer{flex:1 1 40px}
+  nav.jump{display:flex;flex-wrap:wrap;gap:7px}
+  nav.jump a{font-family:var(--mono);font-size:12px;text-decoration:none;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:var(--surface)}
+  nav.jump a:hover{color:var(--accent-ink);border-color:var(--accent);background:var(--accent-soft)}
+
+  /* status pill */
+  .pill{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .pill::before{content:"";width:7px;height:7px;border-radius:50%}
+  .pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent)}
+  .pill.ok::before{background:var(--ok)}
+  .pill.wip{color:var(--wip);background:color-mix(in srgb,var(--wip) 15%,transparent)}
+  .pill.wip::before{background:var(--wip)}
+  .pill.hazard{color:var(--hazard);background:color-mix(in srgb,var(--hazard) 13%,transparent)}
+  .pill.hazard::before{background:var(--hazard)}
+
+  /* grid + cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(388px,1fr));gap:20px}
+  @media (max-width:460px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;
+    box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;scroll-margin-top:18px}
+  .chead{display:flex;align-items:flex-start;gap:12px;padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+  .idx{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);
+    border:1px solid var(--line);border-radius:7px;padding:5px 8px;line-height:1;margin-top:2px;white-space:nowrap}
+  .cname{flex:1;min-width:0}
+  .cname h2{margin:0;font-size:18px;font-weight:750;letter-spacing:-.01em}
+  .cname .role{color:var(--muted);font-size:13px;margin-top:2px}
+  .cbody{padding:16px 18px 18px;display:flex;flex-direction:column;gap:15px}
+
+  /* image slot */
+  .imgslot{aspect-ratio:16/9;border:1.5px dashed var(--line);border-radius:9px;background:
+    repeating-linear-gradient(45deg,transparent,transparent 9px,var(--sunk) 9px,var(--sunk) 18px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:12px}
+  .imgslot .ph{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .imgslot .fn{font-family:var(--mono);font-size:11px;color:var(--accent-ink);
+    background:var(--accent-soft);padding:2px 7px;border-radius:5px}
+  .imgslot img{width:100%;height:100%;object-fit:contain}
+
+  /* section label */
+  .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--accent-ink);margin:0 0 7px;display:flex;align-items:center;gap:8px}
+  .lbl::after{content:"";flex:1;height:1px;background:var(--line)}
+  .sec{}
+
+  /* spec table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td{padding:5px 0;vertical-align:top;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:0}
+  td.k{font-family:var(--mono);color:var(--muted);white-space:nowrap;width:34%;padding-right:12px;font-size:12px}
+  td.v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .v b{color:var(--accent-ink);font-weight:600}
+
+  /* connection / plain list */
+  ul.conn{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
+  ul.conn li{font-family:var(--mono);font-size:12.5px;padding-left:16px;position:relative;color:var(--ink)}
+  ul.conn li::before{content:"→";position:absolute;left:0;color:var(--accent)}
+  ul.conn li .from{color:var(--muted)}
+
+  /* terminal reflash block */
+  .term{background:var(--sunk);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .term .bar{display:flex;align-items:center;gap:7px;padding:7px 11px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.04em}
+  .term .bar::before{content:"";width:9px;height:9px;border-radius:50%;
+    background:var(--accent);box-shadow:14px 0 0 var(--line),28px 0 0 var(--line)}
+  .term pre{margin:0;padding:12px 13px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65}
+  .term pre .p{color:var(--accent);user-select:none}
+  .term pre .c{color:var(--faint)}
+  .term .none{padding:12px 13px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  /* gotchas */
+  ul.gotcha{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:13px}
+  ul.gotcha li{padding-left:20px;position:relative}
+  ul.gotcha li::before{content:"▲";position:absolute;left:0;top:1px;color:var(--hazard);font-size:11px}
+  ul.gotcha li b{color:var(--ink)}
+
+  /* files */
+  .files{display:flex;flex-wrap:wrap;gap:6px}
+  .files a{font-family:var(--mono);font-size:11.5px;text-decoration:none;color:var(--muted);
+    background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+  .files a:hover{color:var(--accent-ink);border-color:var(--accent)}
+
+  footer{margin-top:30px;padding-top:18px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:13px;max-width:74ch}
+  footer code{font-family:var(--mono);font-size:12px;background:var(--surface2);
+    padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+  a.inline{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+  a.inline:hover{border-bottom-color:var(--accent)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">Groundhog · Field Service</div>
+    <h1>Component Bay</h1>
+    <p class="lede">Every major part of the robot as a self-contained, user-replaceable module. Each card carries what you need to swap a dead component and bring it back — specs, wiring, reflash procedure, and the gotchas that bite. Pair it with the <a class="inline" href="esp8266_planner.html">wiring planner</a> for how they connect.</p>
+    <div class="toolbar">
+      <nav class="jump">
+        <a href="#motherboard">Motherboard</a>
+        <a href="#esp">Motor ESP</a>
+        <a href="#fc">Flight Ctrl</a>
+        <a href="#pi">Companion Pi</a>
+        <a href="#rc">RC Link</a>
+      </nav>
+      <span class="spacer"></span>
+      <div class="legend">
+        <span class="pill ok">Working</span>
+        <span class="pill wip">In progress</span>
+        <span class="pill hazard">Hazard</span>
+      </div>
+      <button class="btn" id="theme" type="button">◐ Theme</button>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ MOTHERBOARD ============ -->
+    <section class="card" id="motherboard">
+      <div class="chead">
+        <div class="idx">MOBO</div>
+        <div class="cname">
+          <h2>Motherboard — SP5 Board</h2>
+          <div class="role">Salvaged pool-cleaner board · power + motors + charging</div>
+        </div>
+        <span class="pill ok">Working</span>
+      </div>
+      <div class="cbody">
+        <div class="imgslot" data-img="sp5_board.jpg">
+          <div class="ph">board photo</div><div class="fn">media/diagrams/sp5_board.jpg</div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Role</p>
+          <p style="margin:0;font-size:13px">Kept whole as the <b>24V source, battery charge path, motor mounts, and Hall-encoder source</b>. Its own MCU is dead/bypassed — the internal H-bridges are gated and can't be opened in firmware, so we drive the motors externally.</p>
+        </div>
+        <div class="sec">
+          <p class="lbl">Specs</p>
+          <table>
+            <tr><td class="k">MCU</td><td class="v">GD32F103CB clone — <b>RDP read-locked</b>, bypassed</td></tr>
+            <tr><td class="k">Pack</td><td class="v">6S <b>24V</b> Li-ion, on-board BMS + charger</td></tr>
+            <tr><td class="k">Motors</td><td class="v">3× integrated-driver BLDC (L / R / blade)</td></tr>
+            <tr><td class="k">Charging</td><td class="v">passive, MCU-independent (works w/ MCU dead)</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <p class="lbl">Connections</p>
+          <ul class="conn">
+            <li><span class="from">pack terminals</span> — 24V tap → drivers / BEC</li>
+            <li><span class="from">motor headers</span> — 5-wire BLDC each (VCC·GND·PWM·DIR·FG)</li>
+            <li><span class="from">encoder Vcc</span> — ~5V rail (measure before tapping)</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Reflash / recover</p>
+          <div class="term"><div class="bar">not reprogrammable</div>
+            <div class="none">MCU is RDP read-locked and bypassed by design. Nothing to flash — the board is passive infrastructure.</div>
+          </div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Replace / gotchas</p>
+          <ul class="gotcha">
+            <li>One-off salvage part — <b>no drop-in replacement</b>. Preserve it.</li>
+            <li><b>Do not gut the board</b> — charging rides on it (dies if removed).</li>
+            <li>CON1 debug console is flaky on the stock board; clean on ours.</li>
+            <li>24V is live — fuse taps, double-check polarity (no reverse protection downstream).</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Files</p>
+          <div class="files">
+            <a href="../../docs/full-handoff.md">docs/full-handoff.md</a>
+            <a href="esp8266_planner.html">wiring planner</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MOTOR ESP ============ -->
+    <section class="card" id="esp">
+      <div class="chead">
+        <div class="idx">ESP</div>
+        <div class="cname">
+          <h2>Motor Interface — ESP32</h2>
+          <div class="role">Per-wheel actuator · C6 now → Lonely Binary S3</div>
+        </div>
+        <span class="pill ok">Working</span>
+      </div>
+      <div class="cbody">
+        <div class="imgslot" data-img="esp_c6_pinout.png">
+          <div class="ph">C6 / S3 pinout</div><div class="fn">media/diagrams/esp_c6_pinout.png</div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Role</p>
+          <p style="margin:0;font-size:13px">Turns the F405's per-wheel commands into what the integrated BLDC drivers need: <b>inverted PWM</b> (0% duty = full speed), a <b>DIR</b> line via level-shifter, <b>FG</b> tacho read-back, and a deadman that kills the motors on signal loss. Also hosts BLE + WiFi manual control.</p>
+        </div>
+        <div class="sec">
+          <p class="lbl">Specs</p>
+          <table>
+            <tr><td class="k">Now</td><td class="v">XIAO <b>ESP32-C6</b> · <b>BLE-only</b> · 2.4GHz WiFi</td></tr>
+            <tr><td class="k">Host</td><td class="v">ESPHome (esp-idf) · <b>bldc-c6.local</b></td></tr>
+            <tr><td class="k">Next</td><td class="v"><b>Lonely Binary S3</b> (WROOM-1 N16R8) · ≤8 motors · CAN</td></tr>
+            <tr><td class="k">Logic</td><td class="v">3.3V — <b>NOT 5V-tolerant</b></td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <p class="lbl">Connections (C6)</p>
+          <ul class="conn">
+            <li>PWM direct — <b>D0 D3 D8</b> (GPIO0/21/19)</li>
+            <li>DIR + FG via BSS138 — GPIO1/2/22/23/20/18</li>
+            <li>RC-PWM in from F405 — <b>D6 D7</b> (GPIO16/17)</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Reflash</p>
+          <div class="term"><div class="bar">esphome · OTA or USB</div><pre><span class="c"># over WiFi (OTA)</span>
+<span class="p">$</span> esphome run firmware/esphome/bldc-c6.yaml
+<span class="c"># USB fallback (C6 = /dev/ttyACM0 on the Pi)</span>
+<span class="p">$</span> esptool.py --chip esp32c6 -p /dev/ttyACM0 \
+      write_flash 0x0 bldc-c6.factory.bin</pre></div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Replace / gotchas</p>
+          <ul class="gotcha">
+            <li>Needs local <b>secrets.yaml</b> (WiFi + API key) — copy from <code>.example</code>.</li>
+            <li><b>5V killed 3 boards</b>: FG/DIR must go through the BSS138 shifter, never straight to a GPIO.</li>
+            <li>Avoid strapping pins (C6: 4/5/8/9/15).</li>
+            <li>After swap, re-add to Home Assistant with the API encryption key.</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Files</p>
+          <div class="files">
+            <a href="../../firmware/esphome/bldc-c6.yaml">bldc-c6.yaml</a>
+            <a href="../../firmware/esphome/rc_pwm.h">rc_pwm.h</a>
+            <a href="../../firmware/esphome/ble.html">ble.html</a>
+            <a href="esp8266_planner.html">planner (S3 board)</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FLIGHT CONTROLLER ============ -->
+    <section class="card" id="fc">
+      <div class="chead">
+        <div class="idx">FC</div>
+        <div class="cname">
+          <h2>Flight Controller — Radiolink F405</h2>
+          <div class="role">The brain · ArduPilot Rover 4.7</div>
+        </div>
+        <span class="pill ok">Working</span>
+      </div>
+      <div class="cbody">
+        <div class="imgslot" data-img="f405_pinout.png">
+          <div class="ph">F405 pinout</div><div class="fn">media/diagrams/f405_pinout.png</div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Role</p>
+          <p style="margin:0;font-size:13px">Reads the FlySky RC, does the <b>skid-steer mix</b>, arming, and RC failsafe, and emits two per-wheel throttle channels to the ESP. Later: RTK-driven GUIDED/AUTO waypoint navigation.</p>
+        </div>
+        <div class="sec">
+          <p class="lbl">Specs</p>
+          <table>
+            <tr><td class="k">Target</td><td class="v">ArduPilot <b>RadiolinkF405</b> · Rover 4.7</td></tr>
+            <tr><td class="k">MCU</td><td class="v">STM32F405 · 5 UART · 7 PWM · 3.3V</td></tr>
+            <tr><td class="k">Compass</td><td class="v"><b>none</b> — needs external / dual-GPS heading</td></tr>
+            <tr><td class="k">Power</td><td class="v">VIN battery (5V pads dead on USB-only)</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <p class="lbl">Connections</p>
+          <ul class="conn">
+            <li><span class="from">FlySky iA6B i-BUS</span> → <b>R4 / PA1</b> (SERIAL4 = RCIN)</li>
+            <li><b>S1</b> ThrottleLeft(73) · <b>S3</b> ThrottleRight(74) → ESP D6/D7</li>
+            <li><span class="from">USB</span> → Pi (MAVLink + power + flashing)</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Reflash + key params</p>
+          <div class="term"><div class="bar">Mission Planner / USB</div><pre><span class="c"># Install Firmware → ArduRover (RadiolinkF405), then load params:</span>
+SERIAL4_PROTOCOL <span class="p">23</span>   <span class="c"># RCIN on R4</span>
+SERIAL2_PROTOCOL <span class="p">-1</span>   <span class="c"># stop SBUS pad hijacking RCIN</span>
+SERVO1_FUNCTION  <span class="p">73</span>   SERVO3_FUNCTION <span class="p">74</span>
+RCMAP_YAW <span class="p">1</span>  RCMAP_PITCH <span class="p">3</span>   <span class="c"># no channel collisions!</span>
+PILOT_STEER_TYPE <span class="p">2</span>   MOT_STR_THR_MIX <span class="p">0.7</span>
+MOT_SLEWRATE <span class="p">0</span>   RC5_OPTION <span class="p">153</span>  <span class="c"># arm switch</span></pre></div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Replace / gotchas</p>
+          <ul class="gotcha">
+            <li><b>No two RCMAP_* on the same channel</b> — collisions weaken/kill steering.</li>
+            <li>SBUS pad (SERIAL2) is inverted <i>and</i> steals RCIN — disable it.</li>
+            <li>Accel-cal stuck? reboot, then <code>PREFLIGHT_CALIBRATION param5=4</code>.</li>
+            <li>5V pads are dead on USB alone — power from VIN to run the RX.</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Files</p>
+          <div class="files">
+            <a href="../../docs/superpowers/specs/2026-08-15-f405-ardurover-integration-design.md">F405 integration spec</a>
+            <a href="esp8266_planner.html">wiring planner</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ COMPANION PI ============ -->
+    <section class="card" id="pi">
+      <div class="chead">
+        <div class="idx">PI</div>
+        <div class="cname">
+          <h2>Companion — Raspberry Pi + LC29H</h2>
+          <div class="role">RTK corrections · MAVLink · autonomy host</div>
+        </div>
+        <span class="pill ok">Working</span>
+      </div>
+      <div class="cbody">
+        <div class="imgslot" data-img="pi_lc29h.jpg">
+          <div class="ph">Pi + LC29H HAT photo</div><div class="fn">media/diagrams/pi_lc29h.jpg</div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Role</p>
+          <p style="margin:0;font-size:13px">Runs the <b>NTRIP → RTCM</b> pipeline into the LC29H for centimeter fix, bridges MAVLink to the F405, and hosts higher-level autonomy (boundary record, coverage planning) + camera. Powers the C6 and F405.</p>
+        </div>
+        <div class="sec">
+          <p class="lbl">Specs</p>
+          <table>
+            <tr><td class="k">Access</td><td class="v"><b>ssh npalakurla@rtk</b></td></tr>
+            <tr><td class="k">GPS</td><td class="v">LC29H RTK HAT · /dev/serial0 @ <b>115200</b></td></tr>
+            <tr><td class="k">Corrections</td><td class="v">str2str ← INCORS VRS <b>MSM4_iMAX</b></td></tr>
+            <tr><td class="k">Fix log</td><td class="v">/var/log/rtk/<b>live-nmea.log</b></td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <p class="lbl">Connections</p>
+          <ul class="conn">
+            <li><span class="from">LC29H HAT</span> — Pi 40-pin header (UART + power)</li>
+            <li><span class="from">antenna</span> — u.FL → SMA (active, needs clear sky)</li>
+            <li><span class="from">USB</span> → F405 (MAVLink) · 5V → C6</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Reflash / recover</p>
+          <div class="term"><div class="bar">reimage SD + redeploy pipeline</div><pre><span class="c"># flash Raspberry Pi OS Lite, then restore:</span>
+<span class="c">#   /usr/local/bin/rtk-{port-relay.py,ntrip.sh}</span>
+<span class="c">#   /etc/rtk-ntrip.env  (chmod 600, creds)</span>
+<span class="p">$</span> sudo systemctl enable --now rtk-port-relay rtk-ntrip
+<span class="p">$</span> systemctl is-active rtk-port-relay rtk-ntrip</pre></div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Replace / gotchas</p>
+          <ul class="gotcha">
+            <li><b>Never open /dev/serial0 directly</b> — it knocks the LC29H out of RTK. Read <code>live-nmea.log</code> instead.</li>
+            <li><b>RTK needs open sky</b> — indoors you only get q=1 (standalone).</li>
+            <li>A warm <code>reboot</code> does <b>not</b> power-cycle the HAT (rides always-on rails).</li>
+            <li>Don't spam receiver resets — each zeroes RTK convergence.</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Files</p>
+          <div class="files">
+            <a href="../../docs/full-handoff.md">docs/full-handoff.md</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RC LINK ============ -->
+    <section class="card" id="rc">
+      <div class="chead">
+        <div class="idx">RC</div>
+        <div class="cname">
+          <h2>RC Link — FlySky FS-i6</h2>
+          <div class="role">Manual control · TX FS-i6 + RX iA6B</div>
+        </div>
+        <span class="pill ok">Working</span>
+      </div>
+      <div class="cbody">
+        <div class="imgslot" data-img="flysky.jpg">
+          <div class="ph">TX + RX photo</div><div class="fn">media/diagrams/flysky.jpg</div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Role</p>
+          <p style="margin:0;font-size:13px">Direct manual RC — the hands-on drive + arm/mode path. Feeds the F405 over i-BUS; the F405 does the mixing.</p>
+        </div>
+        <div class="sec">
+          <p class="lbl">Specs</p>
+          <table>
+            <tr><td class="k">TX</td><td class="v">FlySky <b>FS-i6</b> · 6+ ch</td></tr>
+            <tr><td class="k">RX</td><td class="v"><b>iA6B</b> · i-BUS (non-inverted)</td></tr>
+            <tr><td class="k">Arm</td><td class="v">switch on <b>CH5</b> (RC5_OPTION 153)</td></tr>
+          </table>
+        </div>
+        <div class="sec">
+          <p class="lbl">Connections</p>
+          <ul class="conn">
+            <li><span class="from">iA6B i-BUS (S)</span> → F405 <b>R4</b> (SERIAL4)</li>
+            <li><span class="from">V+ / G</span> → 5V / GND (from F405 VIN rail)</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Reflash / config</p>
+          <div class="term"><div class="bar">TX menu — no firmware flash</div>
+            <div class="none">Configured on the TX itself: bind RX, set channels + failsafe (throttle-cut on loss), dual-rate per switch. No firmware to flash.</div>
+          </div>
+        </div>
+        <div class="sec">
+          <p class="lbl">Replace / gotchas</p>
+          <ul class="gotcha">
+            <li>Bad <b>dual-rate / throttle-curve</b> silently clamps throttle — verify curves flat/full.</li>
+            <li>Sticks freeze while a <b>menu is open</b> — read channels from the main screen.</li>
+            <li>Mixes gone wrong → factory-reset the TX and rebuild.</li>
+            <li>On RX swap: rebind + reset channel map and failsafe.</li>
+          </ul>
+        </div>
+        <div class="sec">
+          <p class="lbl">Files</p>
+          <div class="files">
+            <a href="esp8266_planner.html">wiring planner (RX net)</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    <strong>Scaffold — textual content is live; images are placeholders.</strong> Drop each component's photo/pinout into <code>media/diagrams/</code> using the filename shown in its slot (e.g. <code>f405_pinout.png</code>) and it renders in place. Reflash commands and pin maps are pulled from the working bench setup; verify against hardware before a live reflash. Companion to the <a class="inline" href="esp8266_planner.html">wiring planner</a>.
+  </footer>
+</div>
+
+<script>
+  // theme toggle: cycle system → light → dark
+  (function(){
+    var order=["", "light", "dark"], i=0, root=document.documentElement, btn=document.getElementById("theme");
+    function label(){var t=root.getAttribute("data-theme");return t? (t[0].toUpperCase()+t.slice(1)) : "System";}
+    btn.addEventListener("click",function(){
+      i=(i+1)%order.length; var v=order[i];
+      if(v) root.setAttribute("data-theme",v); else root.removeAttribute("data-theme");
+      btn.textContent="◐ "+label();
+    });
+  })();
+  // swap in real images where present: if media/diagrams/<data-img> loads, replace the placeholder
+  document.querySelectorAll(".imgslot[data-img]").forEach(function(slot){
+    var fn=slot.getAttribute("data-img"); if(!fn) return;
+    var probe=new Image();
+    probe.onload=function(){
+      slot.innerHTML=""; var im=new Image(); im.src=fn; im.alt=fn; slot.appendChild(im);
+    };
+    probe.src=fn;
+  });
+</script>
